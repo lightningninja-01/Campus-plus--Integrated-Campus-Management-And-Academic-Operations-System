@@ -1,61 +1,27 @@
 const express = require("express");
 const cors = require("cors");
 
-const authRoutes = require("./routes/auth.routes");
-const eventRoutes = require("./routes/event.route");
-
-const authMiddleware = require("./middleware/auth.middleware");
+const authRoutes       = require("./routes/auth.routes");
+const eventRoutes      = require("./routes/event.route");
+const courseRoutes     = require("./routes/course.routes");
+const assignmentRoutes = require("./routes/assignment.routes");
+const attendanceRoutes = require("./routes/attendance.routes");
+const resultRoutes     = require("./routes/result.routes");
+const noticeRoutes     = require("./routes/notice.routes");
 
 const app = express();
-
-
-// =============================
-// MIDDLEWARE
-// =============================
 
 app.use(cors());
 app.use(express.json());
 
+app.get("/", (req, res) => res.send("Campus+ Backend Running 🚀"));
 
-// =============================
-// HEALTH CHECK
-// =============================
-
-app.get("/", (req, res) => {
-  res.send("Campus+ Backend Running 🚀");
-});
-
-
-// =============================
-// AUTH ROUTES
-// =============================
-
-app.use("/auth", authRoutes);
-
-
-// =============================
-// EVENT ROUTES
-// =============================
-
-app.use("/events", eventRoutes);
-
-
-// =============================
-// PROTECTED TEST ROUTE
-// =============================
-
-app.get("/profile", authMiddleware, (req, res) => {
-
-  res.json({
-    message: "Protected route accessed successfully",
-    user: req.user
-  });
-
-});
-
-
-// =============================
-// EXPORT APP
-// =============================
+app.use("/auth",        authRoutes);
+app.use("/events",      eventRoutes);
+app.use("/courses",     courseRoutes);
+app.use("/assignments", assignmentRoutes);
+app.use("/attendance",  attendanceRoutes);
+app.use("/results",     resultRoutes);
+app.use("/notices",     noticeRoutes);
 
 module.exports = app;
