@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import CampusLogo from "../components/CampusLogo";
 
 const ROLES = [
   { value: "student", label: "Student", icon: "🎓" },
@@ -91,8 +92,7 @@ export default function AuthPage({ onSuccess }) {
         {/* Left panel - branding */}
         <div className="auth-left">
           <div className="brand">
-            <div className="brand-icon">🎓</div>
-            <h1 className="brand-name">Campus<span>+</span></h1>
+            <CampusLogo height={56} />
           </div>
           <p className="brand-tagline">Your complete campus management ecosystem</p>
 
