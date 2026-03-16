@@ -5,8 +5,12 @@ const connectDB = require("./src/config/database");
 
 const PORT = process.env.PORT || 5000;
 
-connectDB();
+const startServer = async () => {
+  await connectDB();
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer();
