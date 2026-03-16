@@ -152,4 +152,25 @@ router.delete("/:id", authMiddleware, roleMiddleware("faculty", "admin"), async 
   }
 });
 
+// ============================
+// GET assignments created by this faculty
+// Add this to assignment.routes.js before module.exports = router
+// ============================
+
+router.get("/my-faculty", authMiddleware, roleMiddleware("faculty"), async (req, res) => {
+  try {
+    const Assignment = require("../models/Assignment");
+
+    const assignments = await Assignment.find({ faculty: req.user.id })
+      .populate("course", "name code")
+      .populate("submissions.student", "name email rollNumber")
+      .sort({ createdAt: -1 });
+
+    res.json(assignments);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;
