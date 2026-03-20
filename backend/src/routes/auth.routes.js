@@ -14,7 +14,7 @@ const roleMiddleware = require("../middleware/role.middleware");
 
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, role, semester, branch, rollNumber, department, designation } = req.body;
+    const { name, email, password, role, semester, branch, section, school, rollNumber, department, designation } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -150,13 +150,15 @@ router.get("/me", authMiddleware, async (req, res) => {
 
 router.put("/profile", authMiddleware, async (req, res) => {
   try {
-    const { name, email, semester, branch, rollNumber, department, designation } = req.body;
+    const { name, email, semester, branch, section, school, rollNumber, department, designation } = req.body;
 
     const updates = {};
     if (name)        updates.name = name;
     if (email)       updates.email = email;
     if (semester)    updates.semester = semester;
     if (branch)      updates.branch = branch;
+    if (section)     updates.section = section;
+    if (school)      updates.school = school;
     if (rollNumber)  updates.rollNumber = rollNumber;
     if (department)  updates.department = department;
     if (designation) updates.designation = designation;

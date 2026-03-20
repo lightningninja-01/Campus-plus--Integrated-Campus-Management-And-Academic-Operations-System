@@ -8,7 +8,7 @@ const ROLES = [
   { value: "admin", label: "Admin", icon: "🛡️" },
 ];
 
-const BRANCHES = ["CSE", "ECE", "ME", "CIVIL", "EE", "IT"];
+const BRANCHES = ["CSE", "AI/ML", "Data Science", "Cyber Security", "Full Stack Development", "UI/UX Design", "Cloud Computing", "Robotics"];
 
 export default function AuthPage({ onSuccess }) {
   const { login, register } = useAuth();
@@ -26,6 +26,8 @@ export default function AuthPage({ onSuccess }) {
     role: "student",
     semester: "",
     branch: "",
+    section: "",
+    school: "",
     rollNumber: "",
     department: "",
     designation: "",
@@ -61,6 +63,8 @@ export default function AuthPage({ onSuccess }) {
         ...(form.role === "student" && {
           semester: Number(form.semester),
           branch: form.branch,
+          section: form.section,
+          school: form.school,
           rollNumber: form.rollNumber,
         }),
         ...(form.role === "faculty" && {
@@ -92,7 +96,7 @@ export default function AuthPage({ onSuccess }) {
         {/* Left panel - branding */}
         <div className="auth-left">
           <div className="brand">
-            <CampusLogo height={56} />
+            <CampusLogo height={44} />
           </div>
           <p className="brand-tagline">Your complete campus management ecosystem</p>
 
@@ -200,11 +204,27 @@ export default function AuthPage({ onSuccess }) {
                         </div>
                       </div>
                       <div className="field">
-                        <label>Branch</label>
+                        <label>Branch / Specialization</label>
                         <select value={form.branch} onChange={(e) => update("branch", e.target.value)}>
                           <option value="">Select branch</option>
                           {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
                         </select>
+                      </div>
+                      <div className="field-row">
+                        <div className="field">
+                          <label>Section</label>
+                          <select value={form.section} onChange={(e) => update("section", e.target.value)}>
+                            <option value="">Select</option>
+                            {["A","B","C","D","E","F","G"].map(s => <option key={s} value={s}>Section {s}</option>)}
+                          </select>
+                        </div>
+                        <div className="field">
+                          <label>School</label>
+                          <select value={form.school} onChange={(e) => update("school", e.target.value)}>
+                            <option value="">Select</option>
+                            {["SOET","SOMC","SOAD","SOLS","SOAS"].map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
                       </div>
                     </div>
                   )}
