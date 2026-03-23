@@ -42,3 +42,12 @@ export const noticeAPI = {
   create: (data, token) => API.post("/notices", data, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
   remove: (id, token) => API.delete(`/notices/${id}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
 };
+
+// ─── Timetable ────────────────────────────────────────────────────────────────
+export const timetableAPI = {
+  getStudent: (token) => API.get("/timetable/my", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+  getFaculty: (token) => API.get("/timetable/faculty", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+  getAdmin:   (token) => API.get("/timetable/all", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+  generate:   (data, token) => API.post("/timetable/generate", data, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+  archive:    (token) => API.delete("/timetable/active", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+};

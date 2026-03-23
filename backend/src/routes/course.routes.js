@@ -19,6 +19,8 @@ router.get("/", authMiddleware, async (req, res) => {
       const fullUser = await User.findById(user.id);
       if (fullUser && fullUser.semester) query.semester = fullUser.semester;
       if (fullUser && fullUser.branch)   query.branch   = fullUser.branch;
+    } else if (user.role === "faculty") {
+      query.faculty = user.id;
     }
 
     const courses = await Course.find(query)

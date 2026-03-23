@@ -1,14 +1,19 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import CampusLogo from "../components/CampusLogo";
 import API from "../api/api";
+import { timetableAPI } from "../api/index";
+import TimetableBoard from "../components/TimetableBoard";
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 const NAV = [
   { key: "dashboard",  label: "Dashboard",       icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> },
   { key: "students",   label: "Manage Students", icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
   { key: "faculty",    label: "Manage Faculty",  icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+  { key: "staff",      label: "Staff Access",    icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg> },
   { key: "courses",    label: "Courses",         icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
+  { key: "timetable",  label: "Timetable",       icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="18"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="16" y1="14" x2="16" y2="18"/></svg> },
   { key: "notices",    label: "Notices",         icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
   { key: "results",    label: "Upload Results",  icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
   { key: "reports",    label: "Reports",         icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
@@ -35,11 +40,11 @@ export default function AdminDashboard() {
           {sidebarOpen && <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "1px", textTransform: "uppercase" }}>Admin Panel</span>}
         </div>
         <nav style={S.nav}>
-          {NAV.map(({ key, label, icon: Icon }) => {
+          {NAV.map(({ key, label, icon }) => {
             const on = active === key;
             return (
               <button key={key} type="button" onClick={() => setActive(key)} style={{ ...S.navBtn, background: on ? "rgba(99,102,241,0.18)" : "transparent", color: on ? "#a5b4fc" : "rgba(255,255,255,0.55)", borderLeft: on ? "2px solid #6366f1" : "2px solid transparent", justifyContent: sidebarOpen ? "flex-start" : "center" }}>
-                <span style={{ flexShrink: 0, display: "flex" }}><Icon /></span>
+                <span style={{ flexShrink: 0, display: "flex" }}>{icon()}</span>
                 {sidebarOpen && <span style={{ fontSize: 13 }}>{label}</span>}
               </button>
             );
@@ -74,7 +79,9 @@ export default function AdminDashboard() {
           {active === "dashboard" && <DashView token={token} />}
           {active === "students"  && <UsersView role="student" token={token} />}
           {active === "faculty"   && <UsersView role="faculty" token={token} />}
+          {active === "staff"     && <StaffAccessView token={token} />}
           {active === "courses"   && <CoursesView token={token} />}
+          {active === "timetable" && <TimetableAdminView token={token} />}
           {active === "notices"   && <NoticesView token={token} />}
           {active === "results"   && <ResultsView token={token} />}
           {active === "reports"   && <ReportsView token={token} />}
@@ -230,7 +237,436 @@ function UsersView({ role, token }) {
   );
 }
 
+function StaffAccessView({ token }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [actionId, setActionId] = useState(null);
+  const [msg, setMsg] = useState({ text: "", error: false });
+  const [lastCreatedCredentials, setLastCreatedCredentials] = useState(null);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "faculty",
+    department: "",
+    designation: "",
+  });
+
+  const load = useCallback(() => {
+    setLoading(true);
+    Promise.all([
+      API.get("/auth/users?role=faculty", h(token)).catch(() => ({ data: [] })),
+      API.get("/auth/users?role=admin", h(token)).catch(() => ({ data: [] })),
+    ]).then(([facultyRes, adminRes]) => {
+      const faculty = Array.isArray(facultyRes.data) ? facultyRes.data : [];
+      const admins = Array.isArray(adminRes.data) ? adminRes.data : [];
+      setUsers([...admins, ...faculty].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const resetForm = () => {
+    setForm({
+      name: "",
+      email: "",
+      password: "",
+      role: "faculty",
+      department: "",
+      designation: "",
+    });
+  };
+
+  const handleCreate = async () => {
+    if (!form.name || !form.email || !form.password || !form.role) {
+      setMsg({ text: "Please fill all required fields.", error: true });
+      return;
+    }
+
+    if (form.role === "faculty" && !form.department) {
+      setMsg({ text: "Department is required for faculty accounts.", error: true });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await API.post("/auth/users", form, h(token));
+      setMsg({
+        text: `${form.role === "admin" ? "Admin" : "Faculty"} account created successfully.`,
+        error: false,
+      });
+      setLastCreatedCredentials({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role: form.role,
+      });
+      resetForm();
+      load();
+    } catch (error) {
+      console.error("Create staff account failed:", error);
+      setMsg({
+        text: error.response?.data?.message || "Failed to create account. If you just changed the backend, restart the server and try again.",
+        error: true,
+      });
+    }
+    setSaving(false);
+  };
+
+  const toggleActive = async (id, current) => {
+    setActionId(id);
+    try {
+      await API.put(`/auth/users/${id}/toggle-active`, {}, h(token));
+      setMsg({
+        text: `User ${current ? "deactivated" : "activated"} successfully.`,
+        error: false,
+      });
+      load();
+    } catch {
+      setMsg({ text: "Failed to update user.", error: true });
+    }
+    setActionId(null);
+  };
+
+  const filtered = users.filter((user) =>
+    user.name?.toLowerCase().includes(search.toLowerCase()) ||
+    user.email?.toLowerCase().includes(search.toLowerCase()) ||
+    user.department?.toLowerCase().includes(search.toLowerCase()) ||
+    user.designation?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) return <Loader />;
+
+  const adminCount = users.filter((user) => user.role === "admin").length;
+  const facultyCount = users.filter((user) => user.role === "faculty").length;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <PageHeader title="Staff Access" sub="Create and manage faculty and admin login accounts" />
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+        <StatCard icon="🛡️" value={adminCount} label="Other Admins" accent="#8b5cf6" />
+        <StatCard icon="👨‍🏫" value={facultyCount} label="Faculty Accounts" accent="#22c55e" />
+        <StatCard icon="✅" value={users.filter((user) => user.isActive).length} label="Active Staff" accent="#6366f1" />
+      </div>
+
+      <div style={{ ...S.card, border: "1px solid rgba(99,102,241,0.3)" }}>
+        <div style={S.cardHead}>
+          <span style={S.cardTitle}>Create Staff Account</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div>
+            <label style={S.label}>Full Name *</label>
+            <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Enter full name" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Role *</label>
+            <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))} style={S.select}>
+              <option value="faculty">Faculty</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label style={S.label}>Email *</label>
+            <input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="name@college.edu" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Temporary Password *</label>
+            <input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} placeholder="Create a temporary password" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Department {form.role === "faculty" ? "*" : ""}</label>
+            <input value={form.department} onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))} placeholder="e.g. CSE" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Designation</label>
+            <input value={form.designation} onChange={(e) => setForm((p) => ({ ...p, designation: e.target.value }))} placeholder="e.g. Assistant Professor" style={S.input} />
+          </div>
+        </div>
+        <p style={{ margin: "14px 0 0", fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+          Create the account here, then share the email and temporary password with that faculty member or admin so they can log in.
+        </p>
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button type="button" onClick={handleCreate} disabled={saving} style={S.primaryBtn}>
+            {saving ? "Creating..." : "Create Account"}
+          </button>
+          <button type="button" onClick={resetForm} style={S.secondaryBtn}>Reset</button>
+        </div>
+      </div>
+
+      {msg.text && (
+        <div style={{ padding: "10px 16px", background: msg.error ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)", border: `1px solid ${msg.error ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.25)"}`, borderRadius: 10, color: msg.error ? "#fca5a5" : "#86efac", fontSize: 13 }}>
+          {msg.text}
+        </div>
+      )}
+
+      {lastCreatedCredentials && !msg.error && (
+        <div style={{ ...S.card, border: "1px solid rgba(99,102,241,0.22)", padding: "16px 18px" }}>
+          <div style={{ ...S.cardHead, marginBottom: 12 }}>
+            <span style={S.cardTitle}>Share Login Details</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={S.label}>Account Type</label>
+              <div style={S.input}>{lastCreatedCredentials.role}</div>
+            </div>
+            <div>
+              <label style={S.label}>Full Name</label>
+              <div style={S.input}>{lastCreatedCredentials.name}</div>
+            </div>
+            <div>
+              <label style={S.label}>Email / Login ID</label>
+              <div style={S.input}>{lastCreatedCredentials.email}</div>
+            </div>
+            <div>
+              <label style={S.label}>Temporary Password</label>
+              <div style={S.input}>{lastCreatedCredentials.password}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(`Email: ${lastCreatedCredentials.email}\nPassword: ${lastCreatedCredentials.password}`)}
+              style={S.primaryBtn}
+            >
+              Copy Credentials
+            </button>
+            <button
+              type="button"
+              onClick={() => setLastCreatedCredentials(null)}
+              style={S.secondaryBtn}
+            >
+              Hide
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={S.card}>
+        <div style={{ marginBottom: 16 }}>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search staff by name, email, department..." style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "#fff", fontFamily: "inherit", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+        </div>
+        {filtered.length === 0 ? (
+          <Empty message="No faculty or admin accounts found." />
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["Name", "Email", "Role", "Department", "Designation", "Status", "Action"].map((head) => <th key={head} style={S.th}>{head}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((user) => (
+                <tr key={user._id}>
+                  <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0" }}>{user.name}</td>
+                  <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{user.email}</td>
+                  <td style={S.td}>
+                    <span style={{ ...S.badge, background: user.role === "admin" ? "rgba(139,92,246,0.15)" : "rgba(34,197,94,0.15)", color: user.role === "admin" ? "#c4b5fd" : "#86efac" }}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{user.department || "—"}</td>
+                  <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{user.designation || "—"}</td>
+                  <td style={S.td}>
+                    <span style={{ ...S.badge, background: user.isActive ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: user.isActive ? "#86efac" : "#fca5a5" }}>
+                      {user.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                  <td style={S.td}>
+                    <button type="button" onClick={() => toggleActive(user._id, user.isActive)} disabled={actionId === user._id} style={{ padding: "5px 14px", borderRadius: 8, border: `1px solid ${user.isActive ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.3)"}`, background: user.isActive ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)", color: user.isActive ? "#fca5a5" : "#86efac", fontFamily: "inherit", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      {actionId === user._id ? "..." : user.isActive ? "Deactivate" : "Activate"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Courses ──────────────────────────────────────────────────────────────────
+function TimetableAdminView({ token }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState("");
+  const [message, setMessage] = useState({ text: "", error: false });
+  const [data, setData] = useState({ timetable: null });
+  const [form, setForm] = useState({
+    name: "Campus+ Master Timetable",
+    days: "Monday,Tuesday,Wednesday,Thursday,Friday",
+    periodsPerDay: 6,
+    startHour: 9,
+    startMinute: 0,
+    slotMinutes: 60,
+    rooms: "Room 101,Room 102,Room 103,Room 104,Lab 201,Lab 202",
+  });
+
+  const load = useCallback(() => {
+    setLoading(true);
+    timetableAPI.getAdmin(token)
+      .then((result) => {
+        setData({ timetable: result.timetable || null });
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const timetable = data.timetable;
+  const entries = Array.isArray(timetable?.entries) ? timetable.entries : [];
+  const groupOptions = Array.from(new Set(entries.map((entry) => `${entry.branch}__${entry.semester}`)))
+    .sort()
+    .map((value) => {
+      const [branch, semester] = value.split("__");
+      return { value, label: `${branch} · Semester ${semester}` };
+    });
+
+  const activeGroup = selectedGroup || groupOptions[0]?.value || "";
+  const filteredEntries = activeGroup
+    ? entries.filter((entry) => `${entry.branch}__${entry.semester}` === activeGroup)
+    : [];
+
+  const handleGenerate = async () => {
+    setSaving(true);
+    setMessage({ text: "", error: false });
+    try {
+      const payload = {
+        name: form.name,
+        days: form.days.split(",").map((item) => item.trim()).filter(Boolean),
+        periodsPerDay: Number(form.periodsPerDay),
+        startHour: Number(form.startHour),
+        startMinute: Number(form.startMinute),
+        slotMinutes: Number(form.slotMinutes),
+        rooms: form.rooms.split(",").map((item) => item.trim()).filter(Boolean),
+      };
+
+      const result = await timetableAPI.generate(payload, token);
+      setMessage({ text: result.message || "Timetable generated successfully.", error: false });
+      setSelectedGroup("");
+      load();
+    } catch (error) {
+      setMessage({ text: error.response?.data?.message || "Failed to generate timetable.", error: true });
+    }
+    setSaving(false);
+  };
+
+  const handleArchive = async () => {
+    setArchiving(true);
+    setMessage({ text: "", error: false });
+    try {
+      const result = await timetableAPI.archive(token);
+      setMessage({ text: result.message || "Timetable archived.", error: false });
+      setData({ timetable: null });
+      setSelectedGroup("");
+    } catch (error) {
+      setMessage({ text: error.response?.data?.message || "Failed to archive timetable.", error: true });
+    }
+    setArchiving(false);
+  };
+
+  if (loading) return <Loader />;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <PageHeader title="Timetable" sub="Generate a clash-free weekly timetable for students and faculty" />
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+        <StatCard icon="🗓️" value={entries.length} label="Scheduled Slots" accent="#6366f1" />
+        <StatCard icon="🏫" value={groupOptions.length} label="Student Groups" accent="#22c55e" />
+        <StatCard icon="👨‍🏫" value={new Set(entries.map((entry) => String(entry.faculty))).size} label="Faculty Scheduled" accent="#f59e0b" />
+      </div>
+
+      <div style={{ ...S.card, border: "1px solid rgba(99,102,241,0.28)" }}>
+        <div style={S.cardHead}>
+          <span style={S.cardTitle}>Generate Timetable</span>
+          {timetable && (
+            <button type="button" onClick={handleArchive} disabled={archiving} style={{ ...S.secondaryBtn, borderColor: "rgba(239,68,68,0.25)", color: "#fca5a5" }}>
+              {archiving ? "Archiving..." : "Archive Current"}
+            </button>
+          )}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div>
+            <label style={S.label}>Timetable Name</label>
+            <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Working Days</label>
+            <input value={form.days} onChange={(e) => setForm((p) => ({ ...p, days: e.target.value }))} placeholder="Monday,Tuesday,Wednesday..." style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Periods Per Day</label>
+            <input type="number" min="1" max="10" value={form.periodsPerDay} onChange={(e) => setForm((p) => ({ ...p, periodsPerDay: e.target.value }))} style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Slot Duration (Minutes)</label>
+            <input type="number" min="30" max="180" step="15" value={form.slotMinutes} onChange={(e) => setForm((p) => ({ ...p, slotMinutes: e.target.value }))} style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Start Hour</label>
+            <input type="number" min="6" max="18" value={form.startHour} onChange={(e) => setForm((p) => ({ ...p, startHour: e.target.value }))} style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Start Minute</label>
+            <input type="number" min="0" max="59" step="5" value={form.startMinute} onChange={(e) => setForm((p) => ({ ...p, startMinute: e.target.value }))} style={S.input} />
+          </div>
+          <div style={{ gridColumn: "1/-1" }}>
+            <label style={S.label}>Available Rooms</label>
+            <input value={form.rooms} onChange={(e) => setForm((p) => ({ ...p, rooms: e.target.value }))} placeholder="Room 101,Room 102,Lab 201" style={S.input} />
+          </div>
+        </div>
+        <p style={{ margin: "14px 0 0", fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+          The generator uses active courses with assigned faculty. Weekly sessions are estimated from course credits, then distributed across days while preventing faculty, room, and class clashes.
+        </p>
+        <button type="button" onClick={handleGenerate} disabled={saving} style={{ ...S.primaryBtn, marginTop: 16 }}>
+          {saving ? "Generating..." : timetable ? "Regenerate Timetable" : "Generate Timetable"}
+        </button>
+      </div>
+
+      {message.text && (
+        <div style={{ padding: "10px 16px", background: message.error ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)", border: `1px solid ${message.error ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.25)"}`, borderRadius: 10, color: message.error ? "#fca5a5" : "#86efac", fontSize: 13 }}>
+          {message.text}
+        </div>
+      )}
+
+      {timetable && groupOptions.length > 0 && (
+        <div style={S.card}>
+          <div style={{ ...S.cardHead, marginBottom: 12 }}>
+            <span style={S.cardTitle}>Preview By Class</span>
+          </div>
+          <div style={{ maxWidth: 360 }}>
+            <label style={S.label}>Select Student Group</label>
+            <select value={activeGroup} onChange={(e) => setSelectedGroup(e.target.value)} style={S.select}>
+              {groupOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginTop: 18 }}>
+            <TimetableBoard
+              title={groupOptions.find((option) => option.value === activeGroup)?.label || "Timetable Preview"}
+              subtitle="Generated weekly class schedule"
+              entries={filteredEntries}
+              settings={timetable.settings}
+              generatedAt={timetable.updatedAt}
+              emptyMessage="No timetable entries found for this class."
+              compact
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CoursesView({ token }) {
   const [courses, setCourses]   = useState([]);
   const [faculty, setFaculty]   = useState([]);

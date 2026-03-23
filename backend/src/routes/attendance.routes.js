@@ -5,6 +5,12 @@ const Course = require("../models/Course");
 const authMiddleware = require("../middleware/auth.middleware");
 const roleMiddleware = require("../middleware/role.middleware");
 
+const canManageCourseAttendance = (course, user) => {
+  if (!course) return false;
+  if (user.role === "admin") return true;
+  return String(course.faculty) === String(user.id);
+};
+
 // ── GET student's attendance summary (all courses) ───────────────────────────
 router.get("/my", authMiddleware, roleMiddleware("student"), async (req, res) => {
   try {
@@ -42,6 +48,12 @@ router.get("/my", authMiddleware, roleMiddleware("student"), async (req, res) =>
 // ── GET attendance for a course on a date (faculty) ───────────────────────────
 router.get("/course/:courseId", authMiddleware, roleMiddleware("faculty", "admin"), async (req, res) => {
   try {
+    const course = await Course.findById(req.params.courseId).select("faculty");
+    if (!course) return res.status(404).json({ message: "Course not found" });
+    if (!canManageCourseAttendance(course, req.user)) {
+      return res.status(403).json({ message: "Not authorized for this course" });
+    }
+
     const records = await Attendance.find({ course: req.params.courseId })
       .populate("records.student", "name rollNumber")
       .sort({ date: -1 });
@@ -63,6 +75,9 @@ router.post("/mark", authMiddleware, roleMiddleware("faculty"), async (req, res)
 
     const course = await Course.findById(courseId);
     if (!course) return res.status(404).json({ message: "Course not found" });
+    if (!canManageCourseAttendance(course, req.user)) {
+      return res.status(403).json({ message: "Not authorized for this course" });
+    }
 
     const attendanceDate = new Date(date);
     attendanceDate.setHours(0, 0, 0, 0);

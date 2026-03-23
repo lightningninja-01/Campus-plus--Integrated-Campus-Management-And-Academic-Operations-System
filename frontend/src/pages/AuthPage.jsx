@@ -8,7 +8,7 @@ const ROLES = [
   { value: "admin", label: "Admin", icon: "🛡️" },
 ];
 
-const BRANCHES = ["CSE", "ECE", "ME", "CIVIL", "EE", "IT"];
+const BRANCHES = ["CSE", "AI/ML", "Data Science", "Cyber Security", "Full Stack Development", "UI/UX Design", "Cloud Computing", "Robotics"];
 
 export default function AuthPage({ onSuccess }) {
   const { login, register } = useAuth();
@@ -26,6 +26,8 @@ export default function AuthPage({ onSuccess }) {
     role: "student",
     semester: "",
     branch: "",
+    section: "",
+    school: "",
     rollNumber: "",
     department: "",
     designation: "",
@@ -57,16 +59,12 @@ export default function AuthPage({ onSuccess }) {
         name: form.name,
         email: form.email,
         password: form.password,
-        role: form.role,
-        ...(form.role === "student" && {
-          semester: Number(form.semester),
-          branch: form.branch,
-          rollNumber: form.rollNumber,
-        }),
-        ...(form.role === "faculty" && {
-          department: form.department,
-          designation: form.designation,
-        }),
+        role: "student",
+        semester: Number(form.semester),
+        branch: form.branch,
+        section: form.section,
+        school: form.school,
+        rollNumber: form.rollNumber,
       };
       const res = await register(payload);
       if (res.success) {
@@ -92,7 +90,7 @@ export default function AuthPage({ onSuccess }) {
         {/* Left panel - branding */}
         <div className="auth-left">
           <div className="brand">
-            <CampusLogo height={56} />
+            <CampusLogo height={44} />
           </div>
           <p className="brand-tagline">Your complete campus management ecosystem</p>
 
@@ -160,76 +158,60 @@ export default function AuthPage({ onSuccess }) {
                     />
                   </div>
 
-                  {/* Role selector */}
                   <div className="field">
-                    <label>I am a...</label>
-                    <div className="role-selector">
-                      {ROLES.map((r) => (
-                        <button
-                          key={r.value}
-                          type="button"
-                          className={`role-btn ${form.role === r.value ? "active" : ""}`}
-                          onClick={() => update("role", r.value)}
-                        >
-                          <span>{r.icon}</span>
-                          <span>{r.label}</span>
-                        </button>
-                      ))}
+                    <label>Registration Type</label>
+                    <div className="student-only-note">
+                      <span className="student-only-icon">🎓</span>
+                      <div>
+                        <strong>Student Registration</strong>
+                        <p>For faculty/admin access, please contact the admin for your credentials.</p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Student-specific fields */}
-                  {form.role === "student" && (
-                    <div className="role-fields">
-                      <div className="field-row">
-                        <div className="field">
-                          <label>Roll Number</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. 21CSE001"
-                            value={form.rollNumber}
-                            onChange={(e) => update("rollNumber", e.target.value)}
-                          />
-                        </div>
-                        <div className="field">
-                          <label>Semester</label>
-                          <select value={form.semester} onChange={(e) => update("semester", e.target.value)}>
-                            <option value="">Select</option>
-                            {[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s}>{s}th Sem</option>)}
-                          </select>
-                        </div>
-                      </div>
+                  <div className="role-fields">
+                    <div className="field-row">
                       <div className="field">
-                        <label>Branch</label>
-                        <select value={form.branch} onChange={(e) => update("branch", e.target.value)}>
-                          <option value="">Select branch</option>
-                          {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Faculty-specific fields */}
-                  {form.role === "faculty" && (
-                    <div className="role-fields">
-                      <div className="field">
-                        <label>Department</label>
-                        <select value={form.department} onChange={(e) => update("department", e.target.value)}>
-                          <option value="">Select department</option>
-                          {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
-                        </select>
-                      </div>
-                      <div className="field">
-                        <label>Designation</label>
+                        <label>Roll Number</label>
                         <input
                           type="text"
-                          placeholder="e.g. Assistant Professor"
-                          value={form.designation}
-                          onChange={(e) => update("designation", e.target.value)}
+                          placeholder="e.g. 21CSE001"
+                          value={form.rollNumber}
+                          onChange={(e) => update("rollNumber", e.target.value)}
                         />
                       </div>
+                      <div className="field">
+                        <label>Semester</label>
+                        <select value={form.semester} onChange={(e) => update("semester", e.target.value)}>
+                          <option value="">Select</option>
+                          {[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s}>{s}th Sem</option>)}
+                        </select>
+                      </div>
                     </div>
-                  )}
+                    <div className="field">
+                      <label>Branch / Specialization</label>
+                      <select value={form.branch} onChange={(e) => update("branch", e.target.value)}>
+                        <option value="">Select branch</option>
+                        {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>Section</label>
+                        <select value={form.section} onChange={(e) => update("section", e.target.value)}>
+                          <option value="">Select</option>
+                          {["A","B","C","D","E","F","G"].map(s => <option key={s} value={s}>Section {s}</option>)}
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label>School</label>
+                        <select value={form.school} onChange={(e) => update("school", e.target.value)}>
+                          <option value="">Select</option>
+                          {["SOET","SOMC","SOAD","SOLS","SOAS"].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -451,30 +433,30 @@ export default function AuthPage({ onSuccess }) {
 
         .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        .role-selector { display: flex; gap: 8px; }
-        .role-btn {
-          flex: 1;
+        .student-only-note {
           display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-          padding: 10px 8px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 10px;
-          color: rgba(255,255,255,0.5);
-          font-family: 'DM Sans', sans-serif;
-          font-size: 12px;
-          cursor: pointer;
-          transition: all 0.2s;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 12px 14px;
+          background: rgba(99,102,241,0.08);
+          border: 1px solid rgba(99,102,241,0.22);
+          border-radius: 12px;
+          color: rgba(255,255,255,0.78);
         }
-        .role-btn span:first-child { font-size: 20px; }
-        .role-btn:hover { border-color: rgba(99,102,241,0.4); color: rgba(255,255,255,0.8); }
-        .role-btn.active {
-          background: rgba(99,102,241,0.15);
-          border-color: #6366f1;
+        .student-only-icon {
+          font-size: 20px;
+          line-height: 1;
+        }
+        .student-only-note strong {
+          display: block;
+          font-size: 13px;
           color: #fff;
-          box-shadow: 0 0 16px rgba(99,102,241,0.2);
+          margin-bottom: 2px;
+        }
+        .student-only-note p {
+          font-size: 12px;
+          color: rgba(255,255,255,0.55);
+          line-height: 1.5;
         }
 
         .role-fields { display: flex; flex-direction: column; gap: 14px; }

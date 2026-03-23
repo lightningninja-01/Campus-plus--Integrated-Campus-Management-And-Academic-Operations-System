@@ -1,12 +1,28 @@
-import { createContext, useContext, useState, useEffect } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { authAPI } from "../api/auth";
 
 const AuthContext = createContext(null);
+
+const normalizeUser = (value) => {
+  if (!value) return null;
+
+  return {
+    ...value,
+    id: value.id || value._id || null,
+  };
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser]   = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem("campus_token"));
   const [loading, setLoading] = useState(true);
+
+  const clearSession = useCallback(() => {
+    localStorage.removeItem("campus_token");
+    setToken(null);
+    setUser(null);
+  }, []);
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -14,7 +30,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const res = await authAPI.me(token);
           if (res && res.user) {
-            setUser(res.user);
+            setUser(normalizeUser(res.user));
           } else {
             // Server responded but token is invalid — clear it
             clearSession();
@@ -46,13 +62,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     verifyToken();
-  }, []);
-
-  const clearSession = () => {
-    localStorage.removeItem("campus_token");
-    setToken(null);
-    setUser(null);
-  };
+  }, [clearSession, token]);
 
   const login = async (email, password) => {
     try {
@@ -60,7 +70,7 @@ export const AuthProvider = ({ children }) => {
       if (res.token) {
         localStorage.setItem("campus_token", res.token);
         setToken(res.token);
-        setUser(res.user);
+        setUser(normalizeUser(res.user));
         return { success: true, role: res.user.role };
       }
       return { success: false, message: res.message || "Login failed" };

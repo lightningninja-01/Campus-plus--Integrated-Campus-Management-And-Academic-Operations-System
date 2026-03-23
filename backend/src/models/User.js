@@ -40,7 +40,17 @@ const userSchema = new mongoose.Schema(
 
     branch: {
       type: String,
-      default: null, // e.g. "CSE"
+      default: null, // e.g. "CSE", "AI/ML", "Data Science"
+    },
+
+    section: {
+      type: String,
+      default: null, // e.g. "A", "B", "C", "D"
+    },
+
+    school: {
+      type: String,
+      default: null, // e.g. "SOET", "SOMC", "SOAD", "SOLS", "SOAS"
     },
 
     rollNumber: {
