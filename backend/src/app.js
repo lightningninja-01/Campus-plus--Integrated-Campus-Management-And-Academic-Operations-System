@@ -6,7 +6,7 @@ const StudyGroup = require("./models/StudyGroup");
 const { parseBearerToken, verifyToken } = require("./middleware/auth.middleware");
 
 const authRoutes        = require("./routes/auth.routes");
-const eventRoutes       = require("./routes/event.route");
+const eventRoutes       = require("./routes/event.routes");
 const courseRoutes      = require("./routes/course.routes");
 const assignmentRoutes  = require("./routes/assignment.routes");
 const attendanceRoutes  = require("./routes/attendance.routes");
