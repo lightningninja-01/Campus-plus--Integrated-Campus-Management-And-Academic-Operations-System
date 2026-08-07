@@ -35,26 +35,31 @@ const normalizeGeneratorSettings = (body = {}) => {
 };
 
 const SLOT_MAP = {
-  "A1": [{ day: "Monday", period: 1 }, { day: "Wednesday", period: 1 }],
-  "B1": [{ day: "Monday", period: 2 }, { day: "Wednesday", period: 2 }],
-  "C1": [{ day: "Monday", period: 3 }, { day: "Wednesday", period: 3 }],
-  "D1": [{ day: "Tuesday", period: 1 }, { day: "Thursday", period: 1 }],
-  "E1": [{ day: "Tuesday", period: 2 }, { day: "Thursday", period: 2 }],
-  "F1": [{ day: "Tuesday", period: 3 }, { day: "Thursday", period: 3 }],
+  // ── Core slots (3 sessions = 3 periods per week) ──
+  "A1": [{ day: "Monday", period: 1 }, { day: "Wednesday", period: 1 }, { day: "Friday", period: 1 }],
+  "B1": [{ day: "Monday", period: 2 }, { day: "Wednesday", period: 2 }, { day: "Friday", period: 2 }],
+  "C1": [{ day: "Monday", period: 3 }, { day: "Wednesday", period: 3 }, { day: "Friday", period: 3 }],
+  "D1": [{ day: "Tuesday", period: 1 }, { day: "Thursday", period: 1 }, { day: "Friday", period: 4 }],
+  "E1": [{ day: "Tuesday", period: 2 }, { day: "Thursday", period: 2 }, { day: "Friday", period: 5 }],
+  "F1": [{ day: "Tuesday", period: 3 }, { day: "Thursday", period: 3 }, { day: "Friday", period: 6 }],
+
+  // ── Elective/VAC slots (2 sessions = 2 periods per week) ──
   "A2": [{ day: "Monday", period: 4 }, { day: "Wednesday", period: 4 }],
   "B2": [{ day: "Tuesday", period: 4 }, { day: "Thursday", period: 4 }],
-  "G1": [{ day: "Friday", period: 1 }, { day: "Friday", period: 2 }],
-  "H1": [{ day: "Friday", period: 3 }, { day: "Friday", period: 4 }],
-  "I1": [{ day: "Tuesday", period: 5 }, { day: "Thursday", period: 5 }],
-  "J1": [{ day: "Monday", period: 5 }, { day: "Wednesday", period: 5 }],
-  "K1": [{ day: "Friday", period: 5 }],
-  "C2": [{ day: "Monday", period: 4 }, { day: "Wednesday", period: 4 }],
-  "D2": [{ day: "Tuesday", period: 4 }, { day: "Thursday", period: 4 }],
-  "E2": [{ day: "Monday", period: 5 }, { day: "Wednesday", period: 5 }],
-  "F2": [{ day: "Tuesday", period: 5 }, { day: "Thursday", period: 5 }],
-  "G2": [{ day: "Friday", period: 3 }, { day: "Friday", period: 4 }],
-  "H2": [{ day: "Friday", period: 5 }, { day: "Friday", period: 6 }],
-  "I2": [{ day: "Tuesday", period: 6 }, { day: "Thursday", period: 6 }],
+  "C2": [{ day: "Monday", period: 5 }, { day: "Wednesday", period: 5 }],
+  "D2": [{ day: "Tuesday", period: 5 }, { day: "Thursday", period: 5 }],
+  "E2": [{ day: "Monday", period: 6 }, { day: "Wednesday", period: 6 }],
+  "F2": [{ day: "Tuesday", period: 6 }, { day: "Thursday", period: 6 }],
+
+  // ── Synonyms / Alt bindings to prevent clashes ──
+  "G1": [{ day: "Monday", period: 7 }, { day: "Wednesday", period: 7 }],
+  "H1": [{ day: "Tuesday", period: 7 }, { day: "Thursday", period: 7 }],
+  "I1": [{ day: "Friday", period: 7 }, { day: "Monday", period: 7 }],
+  "J1": [{ day: "Monday", period: 6 }, { day: "Wednesday", period: 6 }],
+  "K1": [{ day: "Tuesday", period: 6 }, { day: "Thursday", period: 6 }],
+  "G2": [{ day: "Monday", period: 7 }, { day: "Wednesday", period: 7 }],
+  "H2": [{ day: "Tuesday", period: 7 }, { day: "Thursday", period: 7 }],
+  "I2": [{ day: "Friday", period: 7 }, { day: "Monday", period: 7 }],
   "J2": [{ day: "Monday", period: 6 }, { day: "Wednesday", period: 6 }],
   "K2": [{ day: "Friday", period: 7 }]
 };
