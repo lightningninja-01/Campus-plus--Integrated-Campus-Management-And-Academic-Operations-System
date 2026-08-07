@@ -927,7 +927,7 @@ function TimetableAdminView({ token }) {
     startHour: 9,
     startMinute: 0,
     slotMinutes: 60,
-    rooms: "Room 101,Room 102,Room 103,Room 104,Lab 201,Lab 202",
+    rooms: "Room 101,Room 102,Room 103,Room 104,Room 201,Room 202,Room 203,Room 204,Lab 101,Lab 102,Lab 201,Lab 202",
   });
 
   const load = useCallback(() => {
