@@ -200,20 +200,85 @@ function DashView({ greeting, firstName, user, token, setActive, regStatus }) {
   const [courses, setCourses]         = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [notices, setNotices]         = useState([]);
+  const [timetable, setTimetable]     = useState(null);
   const [loading, setLoading]         = useState(true);
+  const [isEditingCanvas, setIsEditingCanvas] = useState(false);
+
+  const [layout, setLayout] = useState(() => {
+    const saved = localStorage.getItem("student_canvas_layout");
+    return saved ? JSON.parse(saved) : [
+      { id: "stats", type: "stats", visible: true, size: "full", title: "Overview Stats" },
+      { id: "timetable_glance", type: "timetable_glance", visible: true, size: "half", title: "Today's Schedule Glance" },
+      { id: "enrolled_courses", type: "enrolled_courses", visible: true, size: "half", title: "My Courses" },
+      { id: "recent_assignments", type: "recent_assignments", visible: true, size: "full", title: "Recent Assignments" },
+      { id: "notices", type: "notices", visible: true, size: "full", title: "Latest Notices" },
+      { id: "notes", type: "notes", visible: false, size: "half", title: "My Study Reminders" }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("student_canvas_layout", JSON.stringify(layout));
+  }, [layout]);
 
   useEffect(() => {
     Promise.all([
       courseAPI.getAll(token).catch(() => []),
       assignmentAPI.getMy(token).catch(() => []),
       noticeAPI.getAll(token).catch(() => []),
-    ]).then(([c, a, n]) => {
+      timetableAPI.getStudent(token).catch(() => null),
+    ]).then(([c, a, n, t]) => {
       setCourses(Array.isArray(c) ? c : []);
       setAssignments(Array.isArray(a) ? a : []);
       setNotices(Array.isArray(n) ? n.slice(0, 3) : []);
+      setTimetable(t);
       setLoading(false);
     });
   }, [token]);
+
+  const moveUp = (idx) => {
+    if (idx === 0) return;
+    setLayout(prev => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx - 1];
+      next[idx - 1] = temp;
+      return next;
+    });
+  };
+
+  const moveDown = (idx) => {
+    if (idx === layout.length - 1) return;
+    setLayout(prev => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx + 1];
+      next[idx + 1] = temp;
+      return next;
+    });
+  };
+
+  const toggleSize = (idx) => {
+    setLayout(prev => prev.map((item, i) => i === idx ? { ...item, size: item.size === "full" ? "half" : "full" } : item));
+  };
+
+  const toggleVisibility = (id) => {
+    setLayout(prev => prev.map(item => item.id === id ? { ...item, visible: !item.visible } : item));
+  };
+
+  const renameWidget = (id, title) => {
+    setLayout(prev => prev.map(item => item.id === id ? { ...item, title } : item));
+  };
+
+  const resetLayout = () => {
+    setLayout([
+      { id: "stats", type: "stats", visible: true, size: "full", title: "Overview Stats" },
+      { id: "timetable_glance", type: "timetable_glance", visible: true, size: "half", title: "Today's Schedule Glance" },
+      { id: "enrolled_courses", type: "enrolled_courses", visible: true, size: "half", title: "My Courses" },
+      { id: "recent_assignments", type: "recent_assignments", visible: true, size: "full", title: "Recent Assignments" },
+      { id: "notices", type: "notices", visible: true, size: "full", title: "Latest Notices" },
+      { id: "notes", type: "notes", visible: false, size: "half", title: "My Study Reminders" }
+    ]);
+  };
 
   const enrolled = courses.filter(c => c.isEnrolled);
   const pending  = assignments.filter(a => a.status === "pending").length;
@@ -224,14 +289,36 @@ function DashView({ greeting, firstName, user, token, setActive, regStatus }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 style={S.pageTitle}>{greeting}, {firstName} 👋</h1>
           <p style={S.pageSub}>
             Semester: <strong>{user?.semester ? `${user.semester}th` : "—"} {user?.branch || ""}</strong>
           </p>
         </div>
-        <span style={S.datePill}>{new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <span style={S.datePill}>{new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
+          <button 
+            type="button" 
+            onClick={() => setIsEditingCanvas(!isEditingCanvas)}
+            style={{ 
+              padding: "8px 16px", 
+              background: isEditingCanvas ? "rgba(16,185,129,0.18)" : "rgba(99,102,241,0.18)", 
+              border: isEditingCanvas ? "1px solid #10b981" : "1px solid rgba(99,102,241,0.3)", 
+              color: isEditingCanvas ? "#34d399" : "#a5b4fc", 
+              borderRadius: 12, 
+              fontSize: 12, 
+              fontWeight: 600, 
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              transition: "all 0.2s"
+            }}
+          >
+            {isEditingCanvas ? "💾 Save Layout" : "🛠️ Customize Canvas"}
+          </button>
+        </div>
       </div>
 
       {/* Course Registration Warning Banner */}
@@ -275,85 +362,265 @@ function DashView({ greeting, firstName, user, token, setActive, regStatus }) {
         </div>
       )}
 
-      {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
-        <StatCard icon="📚" value={enrolled.length} label="Enrolled Courses" accent="#6366f1" onClick={() => setActive("courses")} />
-        <StatCard icon="📝" value={pending}          label="Pending Assignments" accent="#f59e0b" onClick={() => setActive("assignments")} />
-        <StatCard icon="⚠️" value={overdue}          label="Overdue" accent="#ef4444" onClick={() => setActive("assignments")} />
-      </div>
-
-      {/* Enrolled courses */}
-      {enrolled.length > 0 ? (
-        <div style={S.card}>
-          <div style={S.cardHead}>
-            <span style={S.cardTitle}>My Courses</span>
-            <button type="button" style={S.seeAll} onClick={() => setActive("courses")}>View All →</button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
-            {enrolled.slice(0, 6).map((c, i) => (
-              <div key={c._id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 14, borderTop: `3px solid ${COURSE_COLORS[i % COURSE_COLORS.length]}` }}>
-                <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>{c.name}</p>
-                <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{c.code} · {c.credits} Credits</p>
-              </div>
+      {isEditingCanvas && (
+        <div style={{ padding: "16px 20px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>🛠️ Canvas Design Studio: Active Widgets</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            {layout.map(w => (
+              <button 
+                key={w.id}
+                type="button"
+                onClick={() => toggleVisibility(w.id)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 20,
+                  fontSize: 12,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                  border: "none",
+                  background: w.visible ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.05)",
+                  color: w.visible ? "#a5b4fc" : "rgba(255,255,255,0.3)",
+                  transition: "all 0.15s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}
+              >
+                <span>{w.visible ? "👁️" : "🛇"}</span>
+                {w.title}
+              </button>
             ))}
+            <button 
+              type="button" 
+              onClick={resetLayout} 
+              style={{
+                marginLeft: "auto",
+                padding: "5px 12px",
+                borderRadius: 20,
+                fontSize: 11,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                border: "1px solid rgba(239,68,68,0.3)",
+                background: "rgba(239,68,68,0.08)",
+                color: "#fca5a5"
+              }}
+            >
+              Reset Default
+            </button>
           </div>
-        </div>
-      ) : (
-        <div style={S.card}>
-          <Empty message="No courses enrolled yet. Go to My Courses to enroll." action={{ label: "Go to Courses →", onClick: () => setActive("courses") }} />
         </div>
       )}
 
-      {/* Recent assignments */}
-      {assignments.length > 0 && (
-        <div style={S.card}>
-          <div style={S.cardHead}>
-            <span style={S.cardTitle}>Recent Assignments</span>
-            <button type="button" style={S.seeAll} onClick={() => setActive("assignments")}>View All →</button>
-          </div>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>{["Title","Course","Due Date","Status"].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>
-              {assignments.slice(0, 5).map(a => {
-                const st = STATUS[a.status] || STATUS.pending;
-                return (
-                  <tr key={a._id}>
-                    <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0", fontSize: 13 }}>{a.title}</td>
-                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{a.course?.name}</td>
-                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{new Date(a.dueDate).toLocaleDateString("en-IN")}</td>
-                    <td style={S.td}><span style={{ ...S.badge, background: st.bg, color: st.color }}>{st.label}</span></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Customizable Canvas Container */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
+        {layout.map((w, idx) => {
+          if (!w.visible) return null;
+          const isFullWidth = w.size === "full";
 
-      {/* Notices */}
-      {notices.length > 0 && (
-        <div style={S.card}>
-          <div style={S.cardHead}>
-            <span style={S.cardTitle}>Latest Notices</span>
-            <button type="button" style={S.seeAll} onClick={() => setActive("notices")}>See All →</button>
-          </div>
-          {notices.map(n => {
-            const cat = NOTICE_CAT[n.category] || NOTICE_CAT.general;
-            return (
-              <div key={n._id} style={{ paddingBottom: 14, borderBottom: "1px solid rgba(255,255,255,0.05)", marginBottom: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                  <span style={{ ...S.badge, background: cat.bg, color: cat.color, fontSize: 10, textTransform: "uppercase" }}>{n.category}</span>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{new Date(n.createdAt).toLocaleDateString("en-IN")}</span>
+          return (
+            <div 
+              key={w.id} 
+              style={{ 
+                width: isFullWidth ? "100%" : "calc(50% - 12px)", 
+                display: "flex", 
+                flexDirection: "column",
+                transition: "all 0.25s ease",
+                minWidth: 300,
+                border: isEditingCanvas ? "1px dashed #6366f1" : "1px solid transparent",
+                borderRadius: 16
+              }}
+            >
+              {/* Widget Header Controls */}
+              {isEditingCanvas && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(99,102,241,0.08)", borderBottom: "1px solid rgba(99,102,241,0.15)", padding: "8px 16px", borderTopLeftRadius: 16, borderTopRightRadius: 16, gap: 12 }}>
+                  <input 
+                    type="text" 
+                    value={w.title} 
+                    onChange={(e) => renameWidget(w.id, e.target.value)} 
+                    style={{ background: "none", border: "none", color: "#fff", fontWeight: 600, fontSize: 13, borderBottom: "1px dashed rgba(255,255,255,0.3)", outline: "none", width: "100%", maxWidth: 180 }} 
+                  />
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <button type="button" onClick={() => moveUp(idx)} style={S.canvasMinBtn} title="Move Up">↑</button>
+                    <button type="button" onClick={() => moveDown(idx)} style={S.canvasMinBtn} title="Move Down">↓</button>
+                    <button type="button" onClick={() => toggleSize(idx)} style={S.canvasMinBtn} title="Toggle Width">
+                      {w.size === "full" ? "Half Width" : "Full Width"}
+                    </button>
+                    <button type="button" onClick={() => toggleVisibility(w.id)} style={{ ...S.canvasMinBtn, color: "#fca5a5" }} title="Hide Widget">✕</button>
+                  </div>
                 </div>
-                <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{n.title}</p>
-                <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>{n.body}</p>
+              )}
+
+              {/* Real Widget Card Content */}
+              <div 
+                style={{ 
+                  ...S.card, 
+                  flex: 1, 
+                  borderTopLeftRadius: isEditingCanvas ? 0 : 16, 
+                  borderTopRightRadius: isEditingCanvas ? 0 : 16 
+                }}
+              >
+                <div style={S.cardHead}>
+                  <span style={S.cardTitle}>{w.title}</span>
+                  {w.type === "enrolled_courses" && enrolled.length > 0 && (
+                    <button type="button" style={S.seeAll} onClick={() => setActive("courses")}>View All →</button>
+                  )}
+                  {w.type === "recent_assignments" && assignments.length > 0 && (
+                    <button type="button" style={S.seeAll} onClick={() => setActive("assignments")}>View All →</button>
+                  )}
+                  {w.type === "notices" && notices.length > 0 && (
+                    <button type="button" style={S.seeAll} onClick={() => setActive("notices")}>See All →</button>
+                  )}
+                  {w.type === "timetable_glance" && (
+                    <button type="button" style={S.seeAll} onClick={() => setActive("timetable")}>Full Schedule →</button>
+                  )}
+                </div>
+
+                {w.type === "stats" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 16 }}>
+                    <StatCard icon="📚" value={enrolled.length} label="Enrolled Courses" accent="#6366f1" onClick={() => setActive("courses")} />
+                    <StatCard icon="📝" value={pending}          label="Pending Assignments" accent="#f59e0b" onClick={() => setActive("assignments")} />
+                    <StatCard icon="⚠️" value={overdue}          label="Overdue" accent="#ef4444" onClick={() => setActive("assignments")} />
+                  </div>
+                )}
+
+                {w.type === "timetable_glance" && (
+                  <TimetableGlanceWidget timetable={timetable} />
+                )}
+
+                {w.type === "enrolled_courses" && (
+                  enrolled.length > 0 ? (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
+                      {enrolled.slice(0, 6).map((c, i) => (
+                        <div key={c._id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 14, borderTop: `3px solid ${COURSE_COLORS[i % COURSE_COLORS.length]}` }}>
+                          <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>{c.name}</p>
+                          <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{c.code} · {c.credits} Credits</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Empty message="No courses enrolled yet. Go to My Courses to enroll." action={{ label: "Go to Courses →", onClick: () => setActive("courses") }} />
+                  )
+                )}
+
+                {w.type === "recent_assignments" && assignments.length > 0 && (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead><tr>{["Title","Course","Due Date","Status"].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {assignments.slice(0, 5).map(a => {
+                        const st = STATUS[a.status] || STATUS.pending;
+                        return (
+                          <tr key={a._id}>
+                            <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0", fontSize: 13 }}>{a.title}</td>
+                            <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{a.course?.name}</td>
+                            <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{new Date(a.dueDate).toLocaleDateString("en-IN")}</td>
+                            <td style={S.td}><span style={{ ...S.badge, background: st.bg, color: st.color }}>{st.label}</span></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+
+                {w.type === "notices" && notices.length > 0 && (
+                  <div>
+                    {notices.map(n => {
+                      const cat = NOTICE_CAT[n.category] || NOTICE_CAT.general;
+                      return (
+                        <div key={n._id} style={{ paddingBottom: 14, borderBottom: "1px solid rgba(255,255,255,0.05)", marginBottom: 14 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                            <span style={{ ...S.badge, background: cat.bg, color: cat.color, fontSize: 10, textTransform: "uppercase" }}>{n.category}</span>
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{new Date(n.createdAt).toLocaleDateString("en-IN")}</span>
+                          </div>
+                          <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{n.title}</p>
+                          <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>{n.body}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {w.type === "notes" && (
+                  <StudentNotesWidget />
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
+}
+
+// ─── Student Canvas Widget Components ────────────────────────────────────────
+function StudentNotesWidget() {
+  const [content, setContent] = useState(() => localStorage.getItem("student_scratchpad_notes") || "");
+  const handleChange = (e) => {
+    setContent(e.target.value);
+    localStorage.setItem("student_scratchpad_notes", e.target.value);
+  };
+  return (
+    <textarea
+      value={content}
+      onChange={handleChange}
+      placeholder="Jot down assignment reminders, equations, or notes here... (Autosaved)"
+      style={{
+        width: "100%",
+        height: 180,
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        borderRadius: 12,
+        padding: 12,
+        color: "#fff",
+        fontSize: 13,
+        fontFamily: "inherit",
+        outline: "none",
+        resize: "none",
+        lineHeight: 1.5
+      }}
+    />
+  );
+}
+
+function TimetableGlanceWidget({ timetable }) {
+  const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const today = weekdays[new Date().getDay()];
+  
+  const todayEntries = timetable && Array.isArray(timetable.entries)
+    ? timetable.entries.filter(e => e.day === today)
+    : [];
+
+  if (!timetable) {
+    return <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>No active timetable found.</div>;
+  }
+
+  if (todayEntries.length === 0) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 10, color: "rgba(255,255,255,0.4)" }}>
+        <span style={{ fontSize: 32 }}>☕</span>
+        <span style={{ fontSize: 13 }}>No classes scheduled for today ({today}). Rest up!</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Your agenda for today ({today}):</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {todayEntries.map((e, idx) => (
+          <div key={idx} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
+            <div style={{ background: "rgba(99,102,241,0.12)", color: "#a5b4fc", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
+              Period {e.period}
+            </div>
+            <div style={{ flex: 1 }}>
+              <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#fff" }}>{e.courseName}</span>
+              <span style={{ display: "block", fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{e.startTime} - {e.endTime} · Room {e.room}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 }
 
 // ─── My Courses ───────────────────────────────────────────────────────────────
@@ -1177,4 +1444,5 @@ const S = {
   th:         { textAlign: "left", fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.5px", paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.06)", paddingRight: 12 },
   td:         { padding: "12px 12px 12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", verticalAlign: "middle" },
   badge:      { display: "inline-block", padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" },
+  canvasMinBtn:{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", cursor: "pointer", padding: "4px 8px", fontSize: 11, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }
 };

@@ -33,6 +33,7 @@ export default function GroupChat({ group, token, userId, onBack }) {
     // Connect socket
     const socket = io(import.meta.env.VITE_API_URL, {
       transports: ["websocket"],
+      auth: { token },
     });
 
     socket.emit("join_group", group._id);

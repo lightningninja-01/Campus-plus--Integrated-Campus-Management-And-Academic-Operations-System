@@ -132,15 +132,18 @@ function TimetableView({ token }) {
 function DashView({ user, token, setActive }) {
   const [courses, setCourses]       = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [attendanceSummary, setAttendanceSummary] = useState({ courseStats: [], lowAttendanceStudents: [] });
   const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
     Promise.all([
       API.get("/courses", h(token)).catch(() => ({ data: [] })),
       API.get("/assignments/my-faculty", h(token)).catch(() => ({ data: [] })),
-    ]).then(([c, a]) => {
+      API.get("/attendance/faculty/summary", h(token)).catch(() => ({ data: { courseStats: [], lowAttendanceStudents: [] } })),
+    ]).then(([c, a, att]) => {
       setCourses(Array.isArray(c.data) ? c.data.filter((course) => isFacultyCourse(course, user)) : []);
       setAssignments(Array.isArray(a.data) ? a.data : []);
+      setAttendanceSummary(att.data || { courseStats: [], lowAttendanceStudents: [] });
       setLoading(false);
     });
   }, [token, user]);
@@ -181,6 +184,85 @@ function DashView({ user, token, setActive }) {
         <StatCard icon="📚" value={courses.length}   label="My Subjects"       accent="#6366f1" onClick={() => setActive("subjects")} />
         <StatCard icon="🎓" value={totalStudents}     label="Total Students"   accent="#6366f1" onClick={() => setActive("students")} />
         <StatCard icon="📝" value={pendingGrading}    label="Pending Grading"  accent="#f59e0b" onClick={() => setActive("assignments")} />
+      </div>
+
+      {/* Attendance Metrics & Heatmaps */}
+      <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+        {/* Average Course Attendance Progress Bars */}
+        <div style={{ ...S.card, flex: 1, minWidth: 320 }}>
+          <div style={S.cardHead}>
+            <span style={S.cardTitle}>📊 Subject Attendance Averages</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {attendanceSummary.courseStats.length > 0 ? (
+              attendanceSummary.courseStats.map((item, idx) => (
+                <div key={item._id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 500 }}>
+                    <span style={{ color: "#fff" }}>{item.name} ({item.code})</span>
+                    <span style={{ color: item.avgPercent >= 75 ? "#10b981" : "#f59e0b" }}>{item.avgPercent}%</span>
+                  </div>
+                  <div style={{ width: "100%", height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ 
+                      width: `${item.avgPercent}%`, 
+                      height: "100%", 
+                      background: item.avgPercent >= 75 ? "linear-gradient(90deg, #10b981, #059669)" : "linear-gradient(90deg, #f59e0b, #d97706)", 
+                      borderRadius: 4,
+                      transition: "width 0.6s ease" 
+                    }} />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>No attendance logs captured yet.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Low Attendance Alert Panel */}
+        <div style={{ ...S.card, flex: 1.2, minWidth: 320 }}>
+          <div style={S.cardHead}>
+            <span style={{ ...S.cardTitle, color: "#fca5a5" }}>⚠️ Low Attendance Alerts (&lt;75%)</span>
+            <span style={{ background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 12 }}>
+              {attendanceSummary.lowAttendanceStudents.length} Students
+            </span>
+          </div>
+          {attendanceSummary.lowAttendanceStudents.length > 0 ? (
+            <div style={{ maxHeight: 200, overflowY: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    {["Student", "Course", "Attendance"].map((h) => (
+                      <th key={h} style={S.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendanceSummary.lowAttendanceStudents.slice(0, 5).map((item, idx) => (
+                    <tr key={idx}>
+                      <td style={{ ...S.td, fontSize: 12, color: "#e2e8f0", fontWeight: 600 }}>
+                        {item.student?.name}
+                        <span style={{ display: "block", fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 400 }}>
+                          {item.student?.rollNumber || "No Roll"}
+                        </span>
+                      </td>
+                      <td style={{ ...S.td, fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
+                        {item.course?.name}
+                      </td>
+                      <td style={{ ...S.td, fontSize: 12, color: "#f87171", fontWeight: 700 }}>
+                        {item.percent}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8, color: "rgba(16,185,129,0.5)" }}>
+              <span style={{ fontSize: 24 }}>✨</span>
+              <span style={{ fontSize: 13, fontWeight: 500 }}>All students are above the 75% threshold!</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {courses.length > 0 && (

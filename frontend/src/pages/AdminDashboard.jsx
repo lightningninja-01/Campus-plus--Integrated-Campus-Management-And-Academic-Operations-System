@@ -1500,6 +1500,12 @@ function ResultsView({ token }) {
 function ReportsView({ token }) {
   const [data, setData]     = useState({ students: [], courses: [] });
   const [loading, setLoading] = useState(true);
+  
+  // Builder parameters
+  const [repType, setRepType] = useState("students"); // "students" or "courses"
+  const [filterBranch, setFilterBranch] = useState("All");
+  const [filterSem, setFilterSem] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All"); // "All", "Active", "Inactive"
 
   useEffect(() => {
     Promise.all([
@@ -1532,9 +1538,77 @@ function ReportsView({ token }) {
 
   const COLORS = ["#6366f1","#22c55e","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899"];
 
+  // Filter lists based on selected parameters
+  const filteredStudents = data.students.filter(s => {
+    if (filterBranch !== "All" && s.branch !== filterBranch) return false;
+    if (filterSem !== "All" && String(s.semester) !== filterSem) return false;
+    if (filterStatus === "Active" && !s.isActive) return false;
+    if (filterStatus === "Inactive" && s.isActive) return false;
+    return true;
+  });
+
+  const filteredCourses = data.courses.filter(c => {
+    if (filterBranch !== "All" && c.branch !== filterBranch && c.branch !== "all") return false;
+    if (filterSem !== "All" && String(c.semester) !== filterSem) return false;
+    return true;
+  });
+
+  const downloadCSV = () => {
+    let headers = [];
+    let rows = [];
+    
+    if (repType === "students") {
+      headers = ["Name", "Email", "Roll Number", "Branch", "Semester", "Status"];
+      rows = filteredStudents.map(s => [
+        s.name,
+        s.email,
+        s.rollNumber || "—",
+        s.branch || "—",
+        s.semester || "—",
+        s.isActive ? "Active" : "Inactive"
+      ]);
+    } else {
+      headers = ["Course Name", "Code", "Category", "Slot", "Credits", "Capacity", "Enrolled"];
+      rows = filteredCourses.map(c => [
+        c.name,
+        c.code,
+        c.category || "core",
+        c.slot || "—",
+        c.credits || 0,
+        c.capacity || 60,
+        c.enrolledStudents?.length || 0
+      ]);
+    }
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `campus_plus_report_${repType}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const triggerPrint = () => {
+    window.print();
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <PageHeader title="Reports" sub="Campus statistics overview" />
+      <PageHeader title="Reports & Analytics" sub="Campus statistics and database exports panel" />
+
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #print-report-container, #print-report-container * { visibility: visible; }
+          #print-report-container { position: absolute; left: 0; top: 0; width: 100%; color: #000 !important; background: #fff !important; }
+          #print-report-container table { border-collapse: collapse; width: 100%; border: 1px solid #000; }
+          #print-report-container th, #print-report-container td { border: 1px solid #000; padding: 8px; color: #000 !important; text-align: left; }
+          .no-print { display: none !important; }
+        }
+      `}</style>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
         <StatCard icon="🎓" value={data.students.length} label="Total Students" accent="#6366f1" />
@@ -1590,28 +1664,157 @@ function ReportsView({ token }) {
         </div>
       </div>
 
-      {/* Branch breakdown table */}
-      {data.students.length > 0 && (
-        <div style={S.card}>
-          <div style={S.cardHead}><span style={S.cardTitle}>Branch Breakdown</span></div>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>{["Branch","Students","% of Total","Active"].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>
-              {Object.entries(byBranch).map(([branch, count]) => {
-                const active = data.students.filter(s => s.branch === branch && s.isActive).length;
-                return (
-                  <tr key={branch}>
-                    <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0" }}>{branch}</td>
-                    <td style={{ ...S.td, color: "rgba(255,255,255,0.6)" }}>{count}</td>
-                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)" }}>{Math.round((count / data.students.length) * 100)}%</td>
-                    <td style={{ ...S.td, color: "#86efac" }}>{active}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {/* Reports Builder Card */}
+      <div style={S.card} className="no-print">
+        <div style={S.cardHead}>
+          <span style={S.cardTitle}>🛠️ Custom Reports Builder</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button 
+              type="button" 
+              onClick={downloadCSV}
+              style={{ padding: "6px 14px", border: "1px solid rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)", color: "#86efac", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >
+              📥 Download CSV
+            </button>
+            <button 
+              type="button" 
+              onClick={triggerPrint}
+              style={{ padding: "6px 14px", border: "1px solid rgba(99,102,241,0.3)", background: "rgba(99,102,241,0.08)", color: "#a5b4fc", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >
+              🖨️ Print PDF
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* Builder Filters */}
+        <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Report Type</span>
+            <select 
+              value={repType} 
+              onChange={(e) => setRepType(e.target.value)} 
+              style={{ background: "#10112a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 13, minWidth: 150 }}
+            >
+              <option value="students">Student Registers</option>
+              <option value="courses">Course Directory</option>
+            </select>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Branch</span>
+            <select 
+              value={filterBranch} 
+              onChange={(e) => setFilterBranch(e.target.value)} 
+              style={{ background: "#10112a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 13, minWidth: 120 }}
+            >
+              <option value="All">All Branches</option>
+              <option value="CSE">CSE</option>
+              <option value="ECE">ECE</option>
+              <option value="ME">ME</option>
+            </select>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Semester</span>
+            <select 
+              value={filterSem} 
+              onChange={(e) => setFilterSem(e.target.value)} 
+              style={{ background: "#10112a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 13, minWidth: 100 }}
+            >
+              <option value="All">All Semesters</option>
+              {["1","2","3","4","5","6","7","8"].map(s => <option key={s} value={s}>Semester {s}</option>)}
+            </select>
+          </div>
+
+          {repType === "students" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Status</span>
+              <select 
+                value={filterStatus} 
+                onChange={(e) => setFilterStatus(e.target.value)} 
+                style={{ background: "#10112a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 13, minWidth: 100 }}
+              >
+                <option value="All">All Status</option>
+                <option value="Active">Active Only</option>
+                <option value="Inactive">Inactive Only</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Live Preview Container (Used for both Web Preview and CSS Print bindings) */}
+        <div id="print-report-container">
+          <div style={{ marginBottom: 12 }} className="print-header-only">
+            <h2 style={{ margin: 0, fontSize: 18, color: "#fff" }}>
+              Campus+ Master Report: {repType === "students" ? "Student Registers" : "Course Directory"}
+            </h2>
+            <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+              Filters: Branch ({filterBranch}) · Semester ({filterSem}) · Generated at {new Date().toLocaleDateString("en-IN")}
+            </p>
+          </div>
+
+          {repType === "students" ? (
+            filteredStudents.length > 0 ? (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    {["Student Name", "Email", "Roll Number", "Branch", "Semester", "Status"].map(h => (
+                      <th key={h} style={S.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStudents.map(s => (
+                    <tr key={s._id}>
+                      <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0" }}>{s.name}</td>
+                      <td style={{ ...S.td, color: "rgba(255,255,255,0.6)", fontSize: 12 }}>{s.email}</td>
+                      <td style={{ ...S.td, color: "rgba(255,255,255,0.5)" }}>{s.rollNumber || "—"}</td>
+                      <td style={{ ...S.td, color: "rgba(255,255,255,0.5)" }}>{s.branch || "—"}</td>
+                      <td style={{ ...S.td, color: "rgba(255,255,255,0.5)" }}>{s.semester || "—"}</td>
+                      <td style={S.td}>
+                        <span style={{ ...S.badge, background: s.isActive ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: s.isActive ? "#86efac" : "#fca5a5" }}>
+                          {s.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <Empty message="No students match the selected filter criteria." />
+            )
+          ) : (
+            filteredCourses.length > 0 ? (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    {["Course Title", "Code", "Category", "Slot", "Credits", "Capacity", "Enrolled"].map(h => (
+                      <th key={h} style={S.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCourses.map(c => (
+                    <tr key={c._id}>
+                      <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0" }}>{c.name}</td>
+                      <td style={{ ...S.td, color: "rgba(255,255,255,0.5)" }}>{c.code}</td>
+                      <td style={{ ...S.td, textTransform: "uppercase", fontSize: 10, color: c.category === "vac" ? "#a5b4fc" : c.category === "elective" ? "#fcd34d" : "#94a3b8" }}>
+                        {c.category || "core"}
+                      </td>
+                      <td style={{ ...S.td, color: "rgba(255,255,255,0.5)" }}>{c.slot || "—"}</td>
+                      <td style={{ ...S.td, color: "rgba(255,255,255,0.5)" }}>{c.credits || 0}</td>
+                      <td style={{ ...S.td, color: "rgba(255,255,255,0.5)" }}>{c.capacity || 60}</td>
+                      <td style={{ ...S.td, color: "#86efac" }}>{c.enrolledStudents?.length || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <Empty message="No courses match the selected filter criteria." />
+            )
+          )}
+        </div>
+      </div>
     </div>
   );
 }
