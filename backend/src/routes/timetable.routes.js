@@ -78,10 +78,9 @@ const generateEntries = (courseRequests, settings) => {
   const roomBusyPeriods = new Set();
 
   const preAssigned = courseRequests.filter(r => r.course.slot && SLOT_MAP[r.course.slot]);
-  const unassigned = courseRequests.filter(r => !r.course.slot || !SLOT_MAP[r.course.slot]);
-
-  // Sort unassigned courses by credits descending (scheduling heavier courses first reduces backtrack rate)
-  unassigned.sort((a, b) => (b.course.credits || 3) - (a.course.credits || 3));
+  const initialUnassigned = courseRequests.filter(r => !r.course.slot || !SLOT_MAP[r.course.slot]);
+  const unassigned = [...initialUnassigned];
+  const warnings = [];
 
   const checkAndPlaceSlot = (course, slotKey, testOnly = false) => {
     const sessions = SLOT_MAP[slotKey];
@@ -170,10 +169,15 @@ const generateEntries = (courseRequests, settings) => {
   for (const req of preAssigned) {
     const room = checkAndPlaceSlot(req.course, req.course.slot, false);
     if (!room) {
-      throw new Error(`Conflict placing pre-assigned slot "${req.course.slot}" for course ${req.course.name} (${req.course.code}). Check room bounds or change its slot.`);
+      warnings.push(`Pre-assigned slot "${req.course.slot}" for course "${req.course.name}" (${req.course.code}) conflicted. Rescheduled dynamically.`);
+      unassigned.push(req);
+    } else {
+      assignments[req.course._id] = { slotKey: req.course.slot, room };
     }
-    assignments[req.course._id] = { slotKey: req.course.slot, room };
   }
+
+  // Sort unassigned courses by credits descending (scheduling heavier courses first reduces backtrack rate)
+  unassigned.sort((a, b) => (b.course.credits || 3) - (a.course.credits || 3));
 
   // Backtracking CSP Solver
   const solve = (index) => {
@@ -251,7 +255,7 @@ const generateEntries = (courseRequests, settings) => {
     }
   }
 
-  return { entries, courseSlotAssignments };
+  return { entries, courseSlotAssignments, warnings };
 };
 
 router.get("/all", authMiddleware, roleMiddleware("admin"), async (req, res) => {
@@ -374,7 +378,7 @@ router.post("/generate", authMiddleware, roleMiddleware("admin"), async (req, re
     }
 
     const requests = buildCourseRequests(courses);
-    const { entries, courseSlotAssignments } = generateEntries(requests, settings);
+    const { entries, courseSlotAssignments, warnings } = generateEntries(requests, settings);
 
     // Save assigned slots back to Course model so registration slots stay in sync!
     for (const assign of courseSlotAssignments) {
@@ -399,6 +403,7 @@ router.post("/generate", authMiddleware, roleMiddleware("admin"), async (req, re
     return res.status(201).json({
       message: "Timetable generated successfully",
       timetable,
+      warnings,
       stats: {
         courses: courses.length,
         entries: entries.length,

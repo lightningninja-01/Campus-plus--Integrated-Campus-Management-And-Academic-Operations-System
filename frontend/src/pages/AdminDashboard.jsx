@@ -971,7 +971,15 @@ function TimetableAdminView({ token }) {
       };
 
       const result = await timetableAPI.generate(payload, token);
-      setMessage({ text: result.message || "Timetable generated successfully.", error: false });
+      const hasWarnings = result.warnings && result.warnings.length > 0;
+      setMessage({ 
+        text: hasWarnings 
+          ? "Timetable generated with minor slot adjustments to prevent clashes." 
+          : (result.message || "Timetable generated successfully."), 
+        error: false,
+        warning: hasWarnings,
+        warnings: result.warnings 
+      });
       setSelectedGroup("");
       load();
     } catch (error) {
@@ -1054,8 +1062,15 @@ function TimetableAdminView({ token }) {
       </div>
 
       {message.text && (
-        <div style={{ padding: "10px 16px", background: message.error ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)", border: `1px solid ${message.error ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.25)"}`, borderRadius: 10, color: message.error ? "#fca5a5" : "#86efac", fontSize: 13 }}>
-          {message.text}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 16px", background: message.error ? "rgba(239,68,68,0.12)" : message.warning ? "rgba(245,158,11,0.12)" : "rgba(34,197,94,0.12)", border: `1px solid ${message.error ? "rgba(239,68,68,0.25)" : message.warning ? "rgba(245,158,11,0.25)" : "rgba(34,197,94,0.25)"}`, borderRadius: 10, color: message.error ? "#fca5a5" : message.warning ? "#fde047" : "#86efac", fontSize: 13 }}>
+          <div style={{ fontWeight: 600 }}>{message.text}</div>
+          {message.warnings && message.warnings.length > 0 && (
+            <ul style={{ margin: "4px 0 0 16px", padding: 0, fontSize: 11, display: "flex", flexDirection: "column", gap: 4 }}>
+              {message.warnings.map((w, idx) => (
+                <li key={idx} style={{ color: "#fef08a", listStyle: "disc" }}>{w}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
