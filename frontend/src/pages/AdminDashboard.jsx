@@ -572,7 +572,6 @@ function QuickActionsWidget({ setActive, token }) {
     </div>
   );
 }
-}
 
 // ─── Users (Students or Faculty) ─────────────────────────────────────────────
 function UsersView({ role, token }) {
