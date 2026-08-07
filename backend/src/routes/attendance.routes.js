@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const Attendance = require("../models/Attendance");
 const Course = require("../models/Course");
@@ -14,29 +15,65 @@ const canManageCourseAttendance = (course, user) => {
 // ── GET student's attendance summary (all courses) ───────────────────────────
 router.get("/my", authMiddleware, roleMiddleware("student"), async (req, res) => {
   try {
-    const courses = await Course.find({ enrolledStudents: req.user.id });
+    const courses = await Course.find({ enrolledStudents: req.user.id }).select("name code");
+    const courseIds = courses.map((c) => c._id);
 
-    const summary = await Promise.all(
-      courses.map(async (course) => {
-        const records = await Attendance.find({ course: course._id });
-        const total = records.length;
-        const present = records.filter((r) =>
-          r.records.some(
-            (rec) => String(rec.student) === String(req.user.id) && rec.status === "present"
-          )
-        ).length;
-        const percent = total > 0 ? Math.round((present / total) * 100) : 0;
+    if (courseIds.length === 0) {
+      return res.json([]);
+    }
 
-        return {
-          course: { _id: course._id, name: course.name, code: course.code },
-          total,
-          present,
-          absent: total - present,
-          percent,
-          status: percent >= 75 ? "good" : percent >= 60 ? "warning" : "danger",
-        };
-      })
-    );
+    // High-performance aggregation: computes total sessions and present counts database-side
+    const aggregationResults = await Attendance.aggregate([
+      { $match: { course: { $in: courseIds } } },
+      {
+        $project: {
+          course: 1,
+          studentRecord: {
+            $filter: {
+              input: "$records",
+              as: "rec",
+              cond: { $eq: ["$$rec.student", new mongoose.Types.ObjectId(req.user.id)] },
+            },
+          },
+        },
+      },
+      { $unwind: { path: "$studentRecord", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: "$course",
+          total: { $sum: 1 },
+          present: {
+            $sum: {
+              $cond: [{ $eq: ["$studentRecord.status", "present"] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const statsMap = {};
+    aggregationResults.forEach((stat) => {
+      statsMap[stat._id.toString()] = {
+        total: stat.total,
+        present: stat.present,
+      };
+    });
+
+    const summary = courses.map((course) => {
+      const stats = statsMap[course._id.toString()] || { total: 0, present: 0 };
+      const total = stats.total;
+      const present = stats.present;
+      const percent = total > 0 ? Math.round((present / total) * 100) : 0;
+
+      return {
+        course: { _id: course._id, name: course.name, code: course.code },
+        total,
+        present,
+        absent: total - present,
+        percent,
+        status: percent >= 75 ? "good" : percent >= 60 ? "warning" : "danger",
+      };
+    });
 
     res.json(summary);
   } catch (err) {

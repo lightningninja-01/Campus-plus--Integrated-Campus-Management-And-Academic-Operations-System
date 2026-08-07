@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 
 const resultSchema = new mongoose.Schema(
   {
-    student: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    course: { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true },
+    student: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    course: { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true, index: true },
     semester: { type: Number, required: true },
     internalMarks: { type: Number, default: 0 },
     externalMarks: { type: Number, default: 0 },

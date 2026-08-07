@@ -27,4 +27,8 @@ const assignmentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes to optimize listing queries
+assignmentSchema.index({ course: 1, dueDate: 1 }, { background: true });
+assignmentSchema.index({ faculty: 1 }, { background: true });
+
 module.exports = mongoose.model("Assignment", assignmentSchema);

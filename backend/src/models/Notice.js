@@ -20,4 +20,7 @@ const noticeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Compound index to fetch active notices by role sorted by latest
+noticeSchema.index({ isActive: 1, targetRole: 1, createdAt: -1 }, { background: true });
+
 module.exports = mongoose.model("Notice", noticeSchema);

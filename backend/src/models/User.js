@@ -89,4 +89,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Compound index for fast queries when listing students by branch, semester, and role
+userSchema.index({ role: 1, branch: 1, semester: 1 }, { background: true });
+
 module.exports = mongoose.model("User", userSchema);

@@ -28,4 +28,8 @@ const courseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for high-concurrency listing queries
+courseSchema.index({ enrolledStudents: 1 }, { background: true });
+courseSchema.index({ faculty: 1 }, { background: true });
+
 module.exports = mongoose.model("Course", courseSchema);

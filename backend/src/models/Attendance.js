@@ -17,5 +17,7 @@ const attendanceSchema = new mongoose.Schema(
 
 // One attendance record per course per date
 attendanceSchema.index({ course: 1, date: 1 }, { unique: true });
+// Index on the student ID within records array to optimize student summary queries
+attendanceSchema.index({ "records.student": 1 }, { background: true });
 
 module.exports = mongoose.model("Attendance", attendanceSchema);

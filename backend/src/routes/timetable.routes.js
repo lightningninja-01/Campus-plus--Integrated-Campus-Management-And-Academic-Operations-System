@@ -5,6 +5,8 @@ const Timetable = require("../models/Timetable");
 const Course = require("../models/Course");
 const User = require("../models/User");
 const authMiddleware = require("../middleware/auth.middleware");
+const { getRedisClient } = require("../config/redis");
+const { clearCachePattern } = require("../middleware/cache.middleware");
 const roleMiddleware = require("../middleware/role.middleware");
 
 const DEFAULT_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -115,6 +117,15 @@ const generateEntries = (courseRequests, settings) => {
 
 router.get("/all", authMiddleware, roleMiddleware("admin"), async (req, res) => {
   try {
+    const redisClient = getRedisClient();
+    const cacheKey = "timetable:admin:all";
+
+    const cachedTimetable = await redisClient.get(cacheKey);
+    if (cachedTimetable) {
+      res.setHeader("X-Cache", "HIT");
+      return res.json(JSON.parse(cachedTimetable));
+    }
+
     const timetable = await Timetable.findOne({ isActive: true })
       .populate("generatedBy", "name email")
       .sort({ createdAt: -1 });
@@ -123,7 +134,11 @@ router.get("/all", authMiddleware, roleMiddleware("admin"), async (req, res) => 
       return res.json({ timetable: null });
     }
 
-    return res.json({ timetable });
+    const responseBody = { timetable };
+    await redisClient.set(cacheKey, JSON.stringify(responseBody), { EX: 3600 });
+
+    res.setHeader("X-Cache", "MISS");
+    return res.json(responseBody);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });
@@ -132,11 +147,36 @@ router.get("/all", authMiddleware, roleMiddleware("admin"), async (req, res) => 
 
 router.get("/my", authMiddleware, roleMiddleware("student"), async (req, res) => {
   try {
+    const redisClient = getRedisClient();
+
+    const userClassKey = `user:class-info:${req.user.id}`;
+    let classInfoStr = await redisClient.get(userClassKey);
+    let user;
+
+    if (classInfoStr) {
+      user = JSON.parse(classInfoStr);
+    } else {
+      user = await User.findById(req.user.id).select("branch semester section");
+      if (user) {
+        await redisClient.set(userClassKey, JSON.stringify(user), { EX: 1800 });
+      }
+    }
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const sem = user.semester || 0;
+    const branch = user.branch || "none";
+    const sec = user.section || "none";
+    const cacheKey = `timetable:student:${branch}:${sem}:${sec}`;
+
+    const cachedTimetable = await redisClient.get(cacheKey);
+    if (cachedTimetable) {
+      res.setHeader("X-Cache", "HIT");
+      return res.json(JSON.parse(cachedTimetable));
+    }
+
     const timetable = await Timetable.findOne({ isActive: true }).sort({ createdAt: -1 });
     if (!timetable) return res.json({ entries: [], settings: null });
-
-    const user = await User.findById(req.user.id).select("branch semester section");
-    if (!user) return res.status(404).json({ message: "User not found" });
 
     const entries = timetable.entries.filter((entry) =>
       entry.branch === user.branch &&
@@ -144,7 +184,11 @@ router.get("/my", authMiddleware, roleMiddleware("student"), async (req, res) =>
       (!entry.section || entry.section === user.section)
     );
 
-    return res.json({ entries, settings: timetable.settings, generatedAt: timetable.updatedAt });
+    const responseBody = { entries, settings: timetable.settings, generatedAt: timetable.updatedAt };
+    await redisClient.set(cacheKey, JSON.stringify(responseBody), { EX: 3600 });
+
+    res.setHeader("X-Cache", "MISS");
+    return res.json(responseBody);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });
@@ -153,12 +197,25 @@ router.get("/my", authMiddleware, roleMiddleware("student"), async (req, res) =>
 
 router.get("/faculty", authMiddleware, roleMiddleware("faculty"), async (req, res) => {
   try {
+    const redisClient = getRedisClient();
+    const cacheKey = `timetable:faculty:${req.user.id}`;
+
+    const cachedTimetable = await redisClient.get(cacheKey);
+    if (cachedTimetable) {
+      res.setHeader("X-Cache", "HIT");
+      return res.json(JSON.parse(cachedTimetable));
+    }
+
     const timetable = await Timetable.findOne({ isActive: true }).sort({ createdAt: -1 });
     if (!timetable) return res.json({ entries: [], settings: null });
 
     const entries = timetable.entries.filter((entry) => String(entry.faculty) === String(req.user.id));
+    const responseBody = { entries, settings: timetable.settings, generatedAt: timetable.updatedAt };
 
-    return res.json({ entries, settings: timetable.settings, generatedAt: timetable.updatedAt });
+    await redisClient.set(cacheKey, JSON.stringify(responseBody), { EX: 3600 });
+
+    res.setHeader("X-Cache", "MISS");
+    return res.json(responseBody);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });
@@ -190,6 +247,9 @@ router.post("/generate", authMiddleware, roleMiddleware("admin"), async (req, re
       isActive: true,
     });
 
+    // Invalidate all timetable caches
+    await clearCachePattern("timetable:*");
+
     return res.status(201).json({
       message: "Timetable generated successfully",
       timetable,
@@ -214,6 +274,9 @@ router.delete("/active", authMiddleware, roleMiddleware("admin"), async (req, re
 
     timetable.isActive = false;
     await timetable.save();
+
+    // Invalidate all timetable caches
+    await clearCachePattern("timetable:*");
 
     return res.json({ message: "Active timetable archived" });
   } catch (error) {
