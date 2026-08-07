@@ -927,6 +927,7 @@ function RegistrationView({ token, onEnrollChange }) {
 
   const coreCourses = courses.filter(c => c.category === "core" || !c.category);
   const electiveCourses = courses.filter(c => c.category === "elective");
+  const vacCourses = courses.filter(c => c.category === "vac");
 
   let progressColor = "#6366f1";
   if (currentCredits > maxCredits) progressColor = "#ef4444";
@@ -935,6 +936,27 @@ function RegistrationView({ token, onEnrollChange }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
       <PageHeader title="Academic Course Registration" sub="Select courses for your current semester and branch. Review time-slots to prevent clashes." />
+
+      {/* Curriculum Requirements Alert */}
+      <div style={{ 
+        padding: "16px 20px", 
+        background: "rgba(139,92,246,0.08)", 
+        border: "1px solid rgba(139,92,246,0.2)", 
+        borderRadius: 16, 
+        color: "#c084fc", 
+        fontSize: 13,
+        lineHeight: 1.6,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6
+      }}>
+        <span style={{ fontWeight: 700, color: "#fff", fontSize: 14 }}>🎓 Curriculum Requirements:</span>
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+          <li>Register for all core academic subjects (Required).</li>
+          <li>Choose exactly <strong>1 open elective</strong> out of the elective choices (Max 1).</li>
+          <li>Choose exactly <strong>1 Value Added Course (VAC)</strong> out of the VAC choices (Max 1).</li>
+        </ul>
+      </div>
 
       {msg && (
         <div style={{ 
@@ -995,6 +1017,24 @@ function RegistrationView({ token, onEnrollChange }) {
                 key={c._id} 
                 course={c} 
                 color={COURSE_COLORS[(coreCourses.length + i) % COURSE_COLORS.length]} 
+                onAction={() => handleEnroll(c._id, c.isEnrolled)} 
+                actionLoading={actionId === c._id}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Value Added Courses Section */}
+      {vacCourses.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <SectionLabel>Value Added Courses (VAC) ({vacCourses.length})</SectionLabel>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 20 }}>
+            {vacCourses.map((c, i) => (
+              <RegistrationCourseCard 
+                key={c._id} 
+                course={c} 
+                color={COURSE_COLORS[(coreCourses.length + electiveCourses.length + i) % COURSE_COLORS.length]} 
                 onAction={() => handleEnroll(c._id, c.isEnrolled)} 
                 actionLoading={actionId === c._id}
               />

@@ -76,7 +76,6 @@ const seedDatabase = async () => {
     }
     console.log(`Created ${faculties.length} faculty members.`);
 
-    // Destructure some faculties for courses
     const [
       fTuring, fHopper, fLovelace, fNeumann, fShannon, 
       fHamilton, fLiskov, fKnuth, fRitchie, fThompson, 
@@ -139,74 +138,85 @@ const seedDatabase = async () => {
 
     console.log("Created students.");
 
-    // 5. Create 30 Courses
+    // 5. Create 30+ Courses with curriculum-specific credits mapping
     const coursesData = [
-      // CSE Semester 7
+      // ── CSE Semester 7 ──
+      // Cores (5 courses * 4 credits = 20 credits)
       { name: "Machine Learning", code: "CS701", credits: 4, semester: 7, branch: "CSE", department: "CSE", slot: "A1", capacity: 60, category: "core", faculty: fTuring._id, description: "Introduction to Supervised, Unsupervised, and Deep Learning algorithms." },
       { name: "Distributed Systems", code: "CS702", credits: 4, semester: 7, branch: "CSE", department: "CSE", slot: "B1", capacity: 60, category: "core", faculty: fHopper._id, description: "Concepts of replication, consistency models, consensus protocol (Raft/Paxos), and RPCs." },
-      { name: "Cloud Computing", code: "CS703", credits: 3, semester: 7, branch: "CSE", department: "CSE", slot: "C1", capacity: 1, category: "elective", faculty: fNeumann._id, description: "AWS cloud architectures, Lambda functions, and serverless computing." },
-      { name: "Natural Language Processing", code: "CS704", credits: 3, semester: 7, branch: "CSE", department: "CSE", slot: "C1", capacity: 60, category: "elective", faculty: fHopper._id, description: "Foundations of NLP, LSTM models, Attention mechanisms, and Transformers." },
-      { name: "Cryptography & Network Security", code: "CS705", credits: 3, semester: 7, branch: "CSE", department: "CSE", slot: "D1", capacity: 60, category: "elective", faculty: fShannon._id, description: "Symmetric and asymmetric encryption, public key infrastructure, and SSL/TLS." },
-      { name: "Internet of Things", code: "CS706", credits: 3, semester: 7, branch: "CSE", department: "CSE", slot: "B2", capacity: 60, category: "elective", faculty: fLovelace._id, description: "Sensors, actuators, node microcontroller programming, and cloud ingestion." },
-      
-      // ECE Semester 7
+      { name: "Internet of Things", code: "CS706", credits: 4, semester: 7, branch: "CSE", department: "CSE", slot: "D1", capacity: 60, category: "core", faculty: fHamilton._id, description: "Sensors, actuators, microcontroller programming, and cloud telemetry." },
+      { name: "Software Architecture", code: "CS707", credits: 4, semester: 7, branch: "CSE", department: "CSE", slot: "E1", capacity: 60, category: "core", faculty: fLiskov._id, description: "Architectural patterns, microservices, containerization, and system design." },
+      { name: "Information Retrieval", code: "CS708", credits: 4, semester: 7, branch: "CSE", department: "CSE", slot: "F1", capacity: 60, category: "core", faculty: fKnuth._id, description: "Text indexing, vector space models, web search engines, and PageRank algorithms." },
+
+      // Electives (4 options * 2 credits, choose 1)
+      { name: "Cloud Computing", code: "CS703", credits: 2, semester: 7, branch: "CSE", department: "CSE", slot: "C1", capacity: 1, category: "elective", faculty: fNeumann._id, description: "AWS cloud architectures, Lambda functions, and serverless computing." },
+      { name: "Natural Language Processing", code: "CS704", credits: 2, semester: 7, branch: "CSE", department: "CSE", slot: "C1", capacity: 60, category: "elective", faculty: fHopper._id, description: "Foundations of NLP, LSTM models, Attention mechanisms, and Transformers." },
+      { name: "Cryptography & Network Security", code: "CS705", credits: 2, semester: 7, branch: "CSE", department: "CSE", slot: "G1", capacity: 60, category: "elective", faculty: fShannon._id, description: "Symmetric and asymmetric encryption, public key infrastructure, and SSL/TLS." },
+      { name: "Computer Graphics", code: "CS709", credits: 2, semester: 7, branch: "CSE", department: "CSE", slot: "H1", capacity: 60, category: "elective", faculty: fThompson._id, description: "Rasterization, vector rendering, projections, and GPU pipeline modeling." },
+
+      // VAC (Value Added Courses) (3 options * 2 credits, choose 1)
+      { name: "Ethical Hacking Foundations", code: "VAC701", credits: 2, semester: 7, branch: "all", department: "CSE", slot: "I1", capacity: 60, category: "vac", faculty: fRitchie._id, description: "Penetration testing, network footprinting, vulnerabilities, and defenses." },
+      { name: "Yoga and Wellness", code: "VAC702", credits: 2, semester: 7, branch: "all", department: "Chemistry", slot: "J1", capacity: 60, category: "vac", faculty: fCurie._id, description: "Mental health guidance, posture drills, and physical well-being methods." },
+      { name: "Professional Communication", code: "VAC703", credits: 2, semester: 7, branch: "all", department: "Math", slot: "K1", capacity: 60, category: "vac", faculty: fJohnson._id, description: "Written and oral presentation rules, mock interviews, and group work." },
+
+      // ── ECE Semester 7 ──
+      // Cores (5 courses * 4 credits = 20 credits)
       { name: "Embedded Systems", code: "EC701", credits: 4, semester: 7, branch: "ECE", department: "ECE", slot: "A1", capacity: 60, category: "core", faculty: fLovelace._id, description: "Microcontrollers, peripheral interfacing, RTOS scheduling, and debugging." },
       { name: "VLSI Design", code: "EC702", credits: 4, semester: 7, branch: "ECE", department: "ECE", slot: "B1", capacity: 60, category: "core", faculty: fShannon._id, description: "CMOS layout, combinational circuit propagation, and digital design verification." },
-      { name: "Wireless Communication", code: "EC703", credits: 3, semester: 7, branch: "ECE", department: "ECE", slot: "C2", capacity: 60, category: "elective", faculty: fLovelace._id, description: "Cellular signal propagation models, MIMO systems, and 5G cellular networks." },
-      
-      // CSE Semester 3
+      { name: "Digital Image Processing", code: "EC704", credits: 4, semester: 7, branch: "ECE", department: "ECE", slot: "D1", capacity: 60, category: "core", faculty: fHopper._id, description: "Frequency domain transforms, edge detection, filtering, and compression." },
+      { name: "Microwave Engineering", code: "EC705", credits: 4, semester: 7, branch: "ECE", department: "ECE", slot: "E1", capacity: 60, category: "core", faculty: fShannon._id, description: "Waveguides, transmission line matching networks, and antenna equations." },
+      { name: "Control Systems", code: "EC706", credits: 4, semester: 7, branch: "ECE", department: "ECE", slot: "F1", capacity: 60, category: "core", faculty: fJohnson._id, description: "Transfer functions, block diagram reduction, PID controllers, and stability." },
+
+      // Electives (4 options * 2 credits, choose 1)
+      { name: "Wireless Communication", code: "EC703", credits: 2, semester: 7, branch: "ECE", department: "ECE", slot: "C2", capacity: 60, category: "elective", faculty: fLovelace._id, description: "Cellular signal propagation models, MIMO systems, and 5G cellular networks." },
+      { name: "Satellite Communication", code: "EC707", credits: 2, semester: 7, branch: "ECE", department: "ECE", slot: "G2", capacity: 60, category: "elective", faculty: fShannon._id, description: "Orbital coordinates, link calculations, transponder architectures, and GPS." },
+      { name: "Fiber Optic Networks", code: "EC708", credits: 2, semester: 7, branch: "ECE", department: "ECE", slot: "H2", capacity: 60, category: "elective", faculty: fLovelace._id, description: "Total internal reflection, dispersion, laser emitters, and wavelength routing." },
+      { name: "Neural Networks for ECE", code: "EC709", credits: 2, semester: 7, branch: "ECE", department: "ECE", slot: "I2", capacity: 60, category: "elective", faculty: fTuring._id, description: "Analog hardware neuron modeling, feedforward maps, and perceptrons." },
+
+      // ── CSE Semester 3 ──
       { name: "Data Structures", code: "CS301", credits: 4, semester: 3, branch: "CSE", department: "CSE", slot: "A2", capacity: 60, category: "core", faculty: fKnuth._id, description: "Linked Lists, Stack and Queue implementations, Tree traversals, and Sorting." },
       { name: "Discrete Mathematics", code: "CS201", credits: 4, semester: 3, branch: "CSE", department: "CSE", slot: "B1", capacity: 60, category: "core", faculty: fJohnson._id, description: "Combinatorics, graph theory modeling, relations, logic functions, and proofs." },
       { name: "Computer Organization", code: "CS302", credits: 3, semester: 3, branch: "CSE", department: "CSE", slot: "C1", capacity: 60, category: "core", faculty: fNeumann._id, description: "CPU architecture, memory hierarchies, cache maps, instruction pipelining, and bus links." },
       
-      // ECE Semester 3
+      // ── ECE Semester 3 ──
       { name: "Network Theory", code: "EC301", credits: 3, semester: 3, branch: "ECE", department: "ECE", slot: "A2", capacity: 60, category: "core", faculty: fShannon._id, description: "Kirchhoff laws, node/mesh linear loop solving, and active filter topologies." },
       
-      // CSE Semester 5
+      // ── CSE Semester 5 ──
       { name: "Operating Systems", code: "CS401", credits: 4, semester: 5, branch: "CSE", department: "CSE", slot: "D1", capacity: 60, category: "core", faculty: fRitchie._id, description: "Process scheduling, thread race conditions, semaphore locks, and virtual memory." },
       { name: "Database Management Systems", code: "CS402", credits: 4, semester: 5, branch: "CSE", department: "CSE", slot: "B2", capacity: 60, category: "core", faculty: fLiskov._id, description: "SQL database queries, schema normalization rules, indexes, and ACID transactions." },
       { name: "Theory of Computation", code: "CS501", credits: 3, semester: 5, branch: "CSE", department: "CSE", slot: "A1", capacity: 60, category: "core", faculty: fTuring._id, description: "DFAs, context-free grammars, Turing machines, decidability, and Complexity classes." },
-      { name: "Software Engineering", code: "CS502", credits: 3, semester: 5, branch: "CSE", department: "CSE", slot: "C2", capacity: 60, category: "core", faculty: fHamilton._id, description: "Waterfall and Agile design models, design patterns, testing strategies, and Git." },
-
-      // CSE Semester 1 & 6
-      { name: "Introduction to Programming", code: "CS101", credits: 4, semester: 1, branch: "CSE", department: "CSE", slot: "A1", capacity: 60, category: "core", faculty: fRitchie._id, description: "Procedural language foundations in C, arrays, functions, pointers, and memory blocks." },
-      { name: "Computer Networks", code: "CS601", credits: 4, semester: 6, branch: "CSE", department: "CSE", slot: "B1", capacity: 60, category: "core", faculty: fVint._id, description: "OSI Layer standards, IP subnet routing, TCP sliding window, and HTTP protocol." },
-      { name: "Compiler Design", code: "CS602", credits: 4, semester: 6, branch: "CSE", department: "CSE", slot: "D1", capacity: 60, category: "core", faculty: fHopper._id, description: "Lexical analyzers, LL/LR parsing tables, intermediate code representation, and optimization." },
-      
-      // General Engineering Semester 1
-      { name: "Basic Electrical Engineering", code: "EC101", credits: 4, semester: 1, branch: "ECE", department: "ECE", slot: "B1", capacity: 60, category: "core", faculty: fShannon._id, description: "AC/DC voltage sources, active/reactive loads, transformers, and electrical machines." },
-      { name: "Engineering Mechanics", code: "ME101", credits: 4, semester: 1, branch: "ME", department: "ME", slot: "A1", capacity: 60, category: "core", faculty: fFeynman._id, description: "Static structures, free-body diagrams, friction vectors, and moment calculations." },
-      
-      // ME Semester 3, 5, 7
-      { name: "Thermodynamics", code: "ME301", credits: 4, semester: 3, branch: "ME", department: "ME", slot: "B2", capacity: 60, category: "core", faculty: fFeynman._id, description: "First and Second laws of thermodynamics, Carnot cycle, and steam tables." },
-      { name: "Fluid Mechanics", code: "ME501", credits: 4, semester: 5, branch: "ME", department: "ME", slot: "C1", capacity: 60, category: "core", faculty: fHawking._id, description: "Fluid statics, Bernoulli equation, pipe flow friction losses, and dimensional analysis." },
-      { name: "CAD/CAM", code: "ME701", credits: 4, semester: 7, branch: "ME", department: "ME", slot: "D1", capacity: 60, category: "core", faculty: fFeynman._id, description: "Computer-aided geometric design curves, CNC toolpath programming, and 3D printing." },
-
-      // Physics/Chemistry Core (Semester 1)
-      { name: "Engineering Physics", code: "PH101", credits: 4, semester: 1, branch: "all", department: "Physics", slot: "C1", capacity: 60, category: "core", faculty: fHawking._id, description: "Quantum mechanics principles, wave packets, optical fibers, and laser systems." },
-      { name: "Engineering Chemistry", code: "CH101", credits: 4, semester: 1, branch: "all", department: "Chemistry", slot: "D1", capacity: 60, category: "core", faculty: fCurie._id, description: "Chemical kinetics, molecular orbital theory, polymer compounds, and electrochemistry." },
-
-      // Advanced Electives (Semester 8)
-      { name: "Deep Learning", code: "CS801", credits: 4, semester: 8, branch: "CSE", department: "CSE", slot: "A1", capacity: 60, category: "elective", faculty: fTuring._id, description: "Neural network layers, backpropagation, CNN architectures, and GAN networks." },
-      { name: "Blockchain Technology", code: "CS802", credits: 3, semester: 8, branch: "CSE", department: "CSE", slot: "D2", capacity: 60, category: "elective", faculty: fThompson._id, description: "Distributed ledgers, smart contract scripting, consensus protocols, and cryptography." },
-      { name: "Distributed Databases", code: "CS803", credits: 3, semester: 8, branch: "CSE", department: "CSE", slot: "B2", capacity: 60, category: "elective", faculty: fLiskov._id, description: "Cassandra architecture, Dynamo replication, consistency models, and partition maps." }
+      { name: "Software Engineering", code: "CS502", credits: 3, semester: 5, branch: "CSE", department: "CSE", slot: "C2", capacity: 60, category: "core", faculty: fHamilton._id, description: "Waterfall and Agile design models, design patterns, testing strategies, and Git." }
     ];
 
     const courses = await Course.create(coursesData);
     console.log(`Created ${courses.length} courses.`);
 
-    // Keep references to specific courses for relations
     const mlCourse = courses.find(c => c.code === "CS701");
     const dsCourse = courses.find(c => c.code === "CS702");
+    const iotCourse = courses.find(c => c.code === "CS706");
+    const archCourse = courses.find(c => c.code === "CS707");
+    const irCourse = courses.find(c => c.code === "CS708");
+    const nlpCourse = courses.find(c => c.code === "CS704");
+    const hackingCourse = courses.find(c => c.code === "VAC701");
+
     const ecCourse = courses.find(c => c.code === "EC701");
     const dataStrCourse = courses.find(c => c.code === "CS301");
 
-    // Enroll students in core courses to populate enrolledStudent lists
+    // Pre-enroll students in required core subjects to satisfy the credit locks naturally
     mlCourse.enrolledStudents.push(ujjwal._id, amit._id);
     await mlCourse.save();
 
     dsCourse.enrolledStudents.push(ujjwal._id, amit._id);
     await dsCourse.save();
+
+    iotCourse.enrolledStudents.push(ujjwal._id, amit._id);
+    await iotCourse.save();
+
+    archCourse.enrolledStudents.push(ujjwal._id, amit._id);
+    await archCourse.save();
+
+    irCourse.enrolledStudents.push(ujjwal._id, amit._id);
+    await irCourse.save();
 
     ecCourse.enrolledStudents.push(priya._id);
     await ecCourse.save();
@@ -221,13 +231,14 @@ const seedDatabase = async () => {
     const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
     const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
 
+    // CSE Semester 7 expects 24 credits (20 core + 2 elective + 2 vac)
     await RegistrationWindow.create([
       {
         semester: 7,
         branch: "all",
         startDate: threeDaysAgo,
         endDate: fourDaysLater,
-        minCredits: 12,
+        minCredits: 24,
         maxCredits: 24,
         isActive: true
       },
@@ -237,7 +248,7 @@ const seedDatabase = async () => {
         startDate: tenDaysAgo,
         endDate: twoDaysAgo,
         minCredits: 12,
-        maxCredits: 24,
+        maxCredits: 20,
         isActive: true
       }
     ]);
@@ -291,7 +302,6 @@ const seedDatabase = async () => {
     console.log("Created assignments.");
 
     // 9. Create Past Results
-    // CSE Semester 6 Course IDs (mocked to ML / DS / Cryptography for simplicity)
     await Result.create([
       {
         student: ujjwal._id,

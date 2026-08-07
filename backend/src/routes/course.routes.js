@@ -345,6 +345,19 @@ router.post("/:id/enroll", authMiddleware, roleMiddleware("student"), async (req
       }
     }
 
+    // 6.5 Verify Category Limits (Max 1 elective, Max 1 VAC)
+    if (course.category === "elective") {
+      const enrolledElectives = enrolledCourses.filter(c => c.category === "elective");
+      if (enrolledElectives.length >= 1) {
+        return res.status(400).json({ message: "You can only enroll in a maximum of 1 elective course." });
+      }
+    } else if (course.category === "vac") {
+      const enrolledVACs = enrolledCourses.filter(c => c.category === "vac");
+      if (enrolledVACs.length >= 1) {
+        return res.status(400).json({ message: "You can only enroll in a maximum of 1 Value Added Course (VAC)." });
+      }
+    }
+
     // 7. Verify Credit Boundary
     const currentCredits = enrolledCourses.reduce((sum, c) => sum + (c.credits || 3), 0);
     const incomingCredits = course.credits || 3;
