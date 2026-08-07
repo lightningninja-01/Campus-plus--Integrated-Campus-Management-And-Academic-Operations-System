@@ -134,6 +134,7 @@ exports.updateProfile = async (req, res) => {
     const {
       name,
       email,
+      password,
       semester,
       branch,
       section,
@@ -142,6 +143,7 @@ exports.updateProfile = async (req, res) => {
       department,
       designation,
       employeeCode,
+      profilePicture,
     } = req.body;
 
     const updates = {};
@@ -155,6 +157,11 @@ exports.updateProfile = async (req, res) => {
     if (department) updates.department = department;
     if (designation) updates.designation = designation;
     if (employeeCode !== undefined) updates.employeeCode = employeeCode;
+    if (profilePicture !== undefined) updates.profilePicture = profilePicture;
+
+    if (password) {
+      updates.password = await bcrypt.hash(password, 10);
+    }
 
     const user = await User.findByIdAndUpdate(
       req.user.id,

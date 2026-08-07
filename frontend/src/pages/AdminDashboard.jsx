@@ -2125,48 +2125,75 @@ function RegistrationWindowsView({ token }) {
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 function ProfileView({ user, token }) {
-  const [form, setForm]   = useState({ name: user?.name || "", email: user?.email || "" });
+  const [form, setForm]   = useState({
+    name: user?.name || "",
+    email: user?.email || "",
+    employeeCode: user?.employeeCode || "",
+    department: user?.department || "",
+    designation: user?.designation || "",
+    profilePicture: user?.profilePicture || "",
+    password: "",
+  });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg]     = useState({ text: "", error: false });
 
   const handleSave = async () => {
     setSaving(true);
+    setMsg({ text: "", error: false });
     try {
-      await API.put("/auth/profile", form, h(token));
+      const payload = { ...form };
+      if (!payload.password) {
+        delete payload.password;
+      }
+      await API.put("/auth/profile", payload, h(token));
       setMsg({ text: "Profile updated successfully!", error: false });
     } catch (e) {
-      setMsg({ text: e.response?.data?.message || "Failed to update.", error: true });
+      setMsg({ text: e.response?.data?.message || "Failed to update profile.", error: true });
     }
     setSaving(false);
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 560 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 640 }}>
       <PageHeader title="My Profile" sub="View and update your administrator details" />
 
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-        <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 800, color: "#fff" }}>
-          {user?.name?.[0]?.toUpperCase()}
-        </div>
+        {form.profilePicture ? (
+          <img src={form.profilePicture} alt="Avatar" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "2px solid #6366f1" }} />
+        ) : (
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 800, color: "#fff" }}>
+            {user?.name?.[0]?.toUpperCase()}
+          </div>
+        )}
         <div>
           <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#e2e8f0" }}>{user?.name}</p>
-          <p style={{ margin: "3px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{user?.email}</p>
+          <p style={{ margin: "3px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+            {user?.email} {user?.employeeCode && `• Emp Code: ${user.employeeCode}`}
+          </p>
           <span style={{ ...S.badge, background: "rgba(139,92,246,0.15)", color: "#c084fc", marginTop: 6, display: "inline-block" }}>Administrator</span>
         </div>
       </div>
 
       <div style={S.card}>
         <div style={S.cardHead}><span style={S.cardTitle}>Edit Information</span></div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           {[
-            { label: "Full Name", key: "name", placeholder: "Your full name" },
-            { label: "Email Address", key: "email", placeholder: "admin@campus.edu" },
+            { label: "Full Name *", key: "name", placeholder: "Your full name" },
+            { label: "Email Address *", key: "email", placeholder: "admin@campus.edu" },
+            { label: "Employee Code", key: "employeeCode", placeholder: "e.g. EMP001" },
+            { label: "Department", key: "department", placeholder: "e.g. Administration" },
+            { label: "Designation", key: "designation", placeholder: "e.g. Dean of Academic Affairs" },
+            { label: "Profile Picture URL", key: "profilePicture", placeholder: "https://example.com/avatar.jpg" },
           ].map(f => (
-            <div key={f.key}>
+            <div key={f.key} style={f.key === "profilePicture" ? { gridColumn: "1/-1" } : {}}>
               <label style={S.label}>{f.label}</label>
               <input value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} style={S.input} />
             </div>
           ))}
+          <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14, marginTop: 4 }}>
+            <label style={S.label}>Update Password (Leave blank to keep current)</label>
+            <input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="Enter a new password" style={S.input} />
+          </div>
         </div>
         {msg.text && (
           <div style={{ marginTop: 16, padding: "10px 14px", background: msg.error ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)", border: `1px solid ${msg.error ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.3)"}`, borderRadius: 10, color: msg.error ? "#fca5a5" : "#86efac", fontSize: 13 }}>
