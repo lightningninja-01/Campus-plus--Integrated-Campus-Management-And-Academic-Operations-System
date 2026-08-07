@@ -68,6 +68,32 @@ export default function AdminDashboard() {
             <input placeholder="Search..." style={S.searchInput} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
+            <button 
+              type="button" 
+              onClick={async () => {
+                if (!window.confirm("This will RESET the database and seed it with structured demo data (Admin, Faculty, Students, Courses, Reg Windows, Timetables, Notices, Results, Assignments). Proceed?")) return;
+                try {
+                  const res = await API.post("/auth/seed-demo");
+                  alert(res.data?.message || "Demo database seeded successfully!");
+                  window.location.reload();
+                } catch (e) {
+                  alert("Failed to seed database: " + (e.response?.data?.message || e.message));
+                }
+              }}
+              style={{ 
+                marginRight: 8,
+                padding: "8px 14px", 
+                background: "rgba(139,92,246,0.15)", 
+                border: "1px solid rgba(139,92,246,0.3)", 
+                borderRadius: 10, 
+                color: "#c084fc", 
+                fontSize: 12, 
+                fontWeight: 600, 
+                cursor: "pointer"
+              }}
+            >
+              ⚡ Seed Demo Data
+            </button>
             <div style={S.avatar}>{firstName[0]?.toUpperCase()}</div>
             <div>
               <p style={{ margin: 0, fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>{firstName}</p>
