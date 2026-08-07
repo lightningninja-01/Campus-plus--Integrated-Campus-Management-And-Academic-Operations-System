@@ -36,6 +36,7 @@ const COURSE_COLORS = ["#6366f1","#f59e0b","#ef4444","#22c55e","#8b5cf6","#06b6d
 const NAV = [
   { key: "dashboard",   label: "Dashboard",   icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> },
   { key: "courses",     label: "My Courses",  icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
+  { key: "registration",label: "Course Registration", icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> },
   { key: "timetable",   label: "Timetable",   icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="18"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="16" y1="14" x2="16" y2="18"/></svg> },
   { key: "assignments", label: "Assignments", icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg> },
   { key: "attendance",  label: "Attendance",  icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg> },
@@ -130,6 +131,7 @@ export default function StudentDashboard() {
         <div style={S.content}>
           {active === "dashboard"   && <DashView greeting={greeting} firstName={firstName} user={user} token={token} setActive={setActive} />}
           {active === "courses"     && <CoursesView token={token} />}
+          {active === "registration" && <RegistrationView token={token} />}
           {active === "timetable"   && <TimetableView token={token} user={user} />}
           {active === "assignments" && <AssignmentsView token={token} />}
           {active === "attendance"  && <AttendanceView token={token} />}
@@ -137,7 +139,6 @@ export default function StudentDashboard() {
           {active === "notices"     && <NoticesView token={token} />}
           {active === "studygroups" && <StudyGroups token={token} />}
           {active === "tickets"     && <ComingSoon title="My Tickets" icon="🎫" desc="Need Help? We are here. Coming soon!" />}
-          {active === "tickets"     && <ComingSoon title="My Tickets" icon="🎫" desc="Need any help ? We are here for you. Coming soon!" />}
           {active === "profile"     && <ProfileView user={user} token={token} />}
         </div>
       </div>
@@ -821,6 +822,229 @@ function Empty({ message, action }) {
       <span style={{ fontSize: 40 }}>📭</span>
       <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, maxWidth: 320, lineHeight: 1.6 }}>{message}</p>
       {action && <button type="button" onClick={action.onClick} style={{ padding: "8px 20px", background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 20, color: "#a5b4fc", fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}>{action.label}</button>}
+    </div>
+  );
+}
+
+function RegistrationView({ token }) {
+  const [status, setStatus] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [msgType, setMsgType] = useState("success");
+
+  const load = useCallback(async () => {
+    try {
+      const statusData = await courseAPI.getRegistrationStatus(token);
+      const coursesData = await courseAPI.getAll(token);
+      setStatus(statusData);
+      setCourses(Array.isArray(coursesData) ? coursesData : []);
+    } catch (err) {
+      console.error(err);
+      setMsg("Failed to load registration details.");
+      setMsgType("error");
+    }
+  }, [token]);
+
+  useEffect(() => {
+    setLoading(true);
+    load().finally(() => setLoading(false));
+  }, [load]);
+
+  const handleEnroll = async (courseId, isEnrolled) => {
+    setActionId(courseId);
+    setMsg("");
+    try {
+      const res = isEnrolled
+        ? await courseAPI.unenroll(courseId, token)
+        : await courseAPI.enroll(courseId, token);
+      setMsg(res.message || "Action completed!");
+      setMsgType("success");
+      await load();
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Something went wrong.";
+      setMsg(errMsg);
+      setMsgType("error");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  if (loading) return <Loader />;
+  if (!status) return <Empty message="Failed to load registration status." />;
+
+  const { isOpen, minCredits = 12, maxCredits = 24, currentCredits = 0, window: activeWindow } = status;
+
+  if (!isOpen) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400, gap: 16, textAlign: "center", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 24, padding: 40 }}>
+        <span style={{ fontSize: 48 }}>🔒</span>
+        <h2 style={{ margin: 0, fontSize: 20, fontFamily: "'Syne',sans-serif", fontWeight: 700 }}>Course Registration is Closed</h2>
+        <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, maxWidth: 380, lineHeight: 1.6, margin: 0 }}>
+          Registration is not open for your semester or branch at this time. Please contact the academic advisor or check again later.
+        </p>
+        {activeWindow && (
+          <div style={{ marginTop: 8, padding: "8px 16px", background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 12, color: "#fcd34d", fontSize: 13 }}>
+            Scheduled window: {new Date(activeWindow.startDate).toLocaleDateString()} to {new Date(activeWindow.endDate).toLocaleDateString()}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const coreCourses = courses.filter(c => c.category === "core" || !c.category);
+  const electiveCourses = courses.filter(c => c.category === "elective");
+
+  let progressColor = "#6366f1";
+  if (currentCredits > maxCredits) progressColor = "#ef4444";
+  else if (currentCredits >= minCredits) progressColor = "#22c55e";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+      <PageHeader title="Academic Course Registration" sub="Select courses for your current semester and branch. Review time-slots to prevent clashes." />
+
+      {msg && (
+        <div style={{ 
+          padding: "12px 18px", 
+          background: msgType === "success" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", 
+          border: msgType === "success" ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(239,68,68,0.25)", 
+          borderRadius: 12, 
+          color: msgType === "success" ? "#86efac" : "#fca5a5", 
+          fontSize: 13,
+          fontWeight: 500
+        }}>
+          {msgType === "success" ? "✅" : "⚠️"} {msg}
+        </div>
+      )}
+
+      {/* Credit Progress Bar */}
+      <div style={{ ...S.card, display: "flex", flexDirection: "column", gap: 12, padding: "24px 28px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>Registered Credits</span>
+          <span style={{ fontSize: 24, fontWeight: 800, color: "#fff" }}>
+            {currentCredits} <span style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>/ {maxCredits} max</span>
+          </span>
+        </div>
+        <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "hidden", position: "relative" }}>
+          <div style={{ height: "100%", width: `${Math.min((currentCredits / maxCredits) * 100, 100)}%`, background: progressColor, borderRadius: 4, transition: "width 0.3s ease" }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+          <span>Min allowance: {minCredits} credits</span>
+          <span>Max allowance: {maxCredits} credits</span>
+        </div>
+      </div>
+
+      {/* Core Courses Section */}
+      {coreCourses.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <SectionLabel>Core Academic Courses ({coreCourses.length})</SectionLabel>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 20 }}>
+            {coreCourses.map((c, i) => (
+              <RegistrationCourseCard 
+                key={c._id} 
+                course={c} 
+                color={COURSE_COLORS[i % COURSE_COLORS.length]} 
+                onAction={() => handleEnroll(c._id, c.isEnrolled)} 
+                actionLoading={actionId === c._id}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Elective Courses Section */}
+      {electiveCourses.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <SectionLabel>Elective Choices ({electiveCourses.length})</SectionLabel>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 20 }}>
+            {electiveCourses.map((c, i) => (
+              <RegistrationCourseCard 
+                key={c._id} 
+                course={c} 
+                color={COURSE_COLORS[(coreCourses.length + i) % COURSE_COLORS.length]} 
+                onAction={() => handleEnroll(c._id, c.isEnrolled)} 
+                actionLoading={actionId === c._id}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {courses.length === 0 && <Empty message="No courses available for registration in your semester and department." />}
+    </div>
+  );
+}
+
+function RegistrationCourseCard({ course, color, onAction, actionLoading }) {
+  const isEnrolled = !!course.isEnrolled;
+  const capacity = course.capacity || 60;
+  const enrolledCount = course.enrolledCount || 0;
+  const isFull = enrolledCount >= capacity;
+  const fillPercent = Math.min((enrolledCount / capacity) * 100, 100);
+
+  return (
+    <div style={{ ...S.card, borderTop: `3px solid ${color}`, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 16, height: "100%", padding: 20 }}>
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{course.name}</span>
+          <span style={{ ...S.badge, background: course.category === "elective" ? "rgba(245,158,11,0.12)" : "rgba(34,197,94,0.12)", color: course.category === "elective" ? "#fcd34d" : "#86efac", border: course.category === "elective" ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(34,197,94,0.2)" }}>
+            {course.category === "elective" ? "Elective" : "Core"}
+          </span>
+        </div>
+        <p style={{ margin: "0 0 10px", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+          {course.code} · {course.credits} Credits
+        </p>
+
+        {course.slot && (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "0 0 12px", padding: "4px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}>
+            <span>🕒 Slot:</span>
+            <strong style={{ color: "#a5b4fc" }}>{course.slot}</strong>
+          </div>
+        )}
+
+        {course.description && (
+          <p style={{ margin: "0 0 16px", fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.5 }}>
+            {course.description}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "0 0 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 500 }}>
+            <span>Capacity</span>
+            <span style={{ color: isFull ? "#fca5a5" : "rgba(255,255,255,0.5)" }}>
+              {enrolledCount} / {capacity} Seats
+            </span>
+          </div>
+          <div style={{ height: 4, background: "rgba(255,255,255,0.04)", borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${fillPercent}%`, background: isFull ? "#ef4444" : "#22c55e", borderRadius: 2 }} />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onAction}
+          disabled={actionLoading || (!isEnrolled && isFull)}
+          style={{ 
+            width: "100%", 
+            padding: "10px", 
+            borderRadius: 12, 
+            border: isEnrolled ? "1px solid rgba(239,68,68,0.25)" : `1px solid ${color}`, 
+            background: isEnrolled ? "rgba(239,68,68,0.08)" : `${color}18`, 
+            color: isEnrolled ? "#fca5a5" : color, 
+            fontFamily: "inherit", 
+            fontSize: 13, 
+            fontWeight: 600, 
+            cursor: actionLoading || (!isEnrolled && isFull) ? "not-allowed" : "pointer", 
+            transition: "all 0.2s", 
+            opacity: actionLoading ? 0.6 : 1 
+          }}
+        >
+          {actionLoading ? "Processing..." : isEnrolled ? "Drop Course" : isFull ? "Course Full" : "Register Course"}
+        </button>
+      </div>
     </div>
   );
 }

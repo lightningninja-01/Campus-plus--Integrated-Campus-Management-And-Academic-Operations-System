@@ -24,6 +24,10 @@ const courseSchema = new mongoose.Schema(
     ],
 
     isActive: { type: Boolean, default: true },
+
+    capacity: { type: Number, default: 60 },
+    category: { type: String, enum: ["core", "elective"], default: "core" },
+    slot: { type: String, default: null, trim: true },
   },
   { timestamps: true }
 );

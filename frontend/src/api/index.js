@@ -9,6 +9,11 @@ export const courseAPI = {
   remove:   (id, token) => API.delete(`/courses/${id}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
   enroll:   (id, token) => API.post(`/courses/${id}/enroll`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
   unenroll: (id, token) => API.post(`/courses/${id}/unenroll`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+  getRegistrationStatus: (token) => API.get("/courses/registration/status", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+  getRegistrationWindows: (token) => API.get("/courses/registration/windows", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+  createRegistrationWindow: (data, token) => API.post("/courses/registration/windows", data, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+  updateRegistrationWindow: (id, data, token) => API.put(`/courses/registration/windows/${id}`, data, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
+  deleteRegistrationWindow: (id, token) => API.delete(`/courses/registration/windows/${id}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data),
 };
 
 // ── Assignments ───────────────────────────────────────────────────────────────

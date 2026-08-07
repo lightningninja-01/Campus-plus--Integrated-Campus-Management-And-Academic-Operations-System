@@ -13,6 +13,7 @@ const NAV = [
   { key: "faculty",    label: "Manage Faculty",  icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
   { key: "staff",      label: "Staff Access",    icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg> },
   { key: "courses",    label: "Courses",         icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
+  { key: "registration",label: "Reg Windows",    icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> },
   { key: "timetable",  label: "Timetable",       icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="18"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="16" y1="14" x2="16" y2="18"/></svg> },
   { key: "notices",    label: "Notices",         icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
   { key: "results",    label: "Upload Results",  icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
@@ -81,6 +82,7 @@ export default function AdminDashboard() {
           {active === "faculty"   && <UsersView role="faculty" token={token} />}
           {active === "staff"     && <StaffAccessView token={token} />}
           {active === "courses"   && <CoursesView token={token} />}
+          {active === "registration" && <RegistrationWindowsView token={token} />}
           {active === "timetable" && <TimetableAdminView token={token} />}
           {active === "notices"   && <NoticesView token={token} />}
           {active === "results"   && <ResultsView token={token} />}
@@ -675,7 +677,7 @@ function CoursesView({ token }) {
   const [editId, setEditId]     = useState(null);
   const [msg, setMsg]           = useState("");
   const [deleting, setDeleting] = useState(null);
-  const [form, setForm] = useState({ name: "", code: "", description: "", credits: 3, semester: "", branch: "", department: "", faculty: "" });
+  const [form, setForm] = useState({ name: "", code: "", description: "", credits: 3, semester: "", branch: "", department: "", faculty: "", capacity: 60, category: "core", slot: "" });
 
   const load = useCallback(() => {
     Promise.all([
@@ -690,7 +692,7 @@ function CoursesView({ token }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const resetForm = () => { setForm({ name: "", code: "", description: "", credits: 3, semester: "", branch: "", department: "", faculty: "" }); setEditId(null); setShowForm(false); };
+  const resetForm = () => { setForm({ name: "", code: "", description: "", credits: 3, semester: "", branch: "", department: "", faculty: "", capacity: 60, category: "core", slot: "" }); setEditId(null); setShowForm(false); };
 
   const handleSubmit = async () => {
     if (!form.name || !form.code || !form.semester || !form.branch || !form.department) {
@@ -709,7 +711,19 @@ function CoursesView({ token }) {
   };
 
   const handleEdit = (c) => {
-    setForm({ name: c.name, code: c.code, description: c.description || "", credits: c.credits, semester: c.semester, branch: c.branch, department: c.department, faculty: c.faculty?._id || "" });
+    setForm({ 
+      name: c.name, 
+      code: c.code, 
+      description: c.description || "", 
+      credits: c.credits, 
+      semester: c.semester, 
+      branch: c.branch, 
+      department: c.department, 
+      faculty: c.faculty?._id || "",
+      capacity: c.capacity || 60,
+      category: c.category || "core",
+      slot: c.slot || ""
+    });
     setEditId(c._id); setShowForm(true);
   };
 
@@ -771,6 +785,21 @@ function CoursesView({ token }) {
                 {faculty.map(f => <option key={f._id} value={f._id}>{f.name} — {f.department || "N/A"}</option>)}
               </select>
             </div>
+            <div>
+              <label style={S.label}>Category</label>
+              <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} style={S.select}>
+                <option value="core">Core Course</option>
+                <option value="elective">Elective Choice</option>
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>Time-Slot</label>
+              <input value={form.slot} onChange={e => setForm(p => ({ ...p, slot: e.target.value }))} placeholder="e.g. A1, B2" style={S.input} />
+            </div>
+            <div style={{ gridColumn: "1/-1" }}>
+              <label style={S.label}>Seat Capacity</label>
+              <input type="number" value={form.capacity} onChange={e => setForm(p => ({ ...p, capacity: Number(e.target.value) }))} placeholder="e.g. 60" style={S.input} />
+            </div>
             <div style={{ gridColumn: "1/-1" }}>
               <label style={S.label}>Description</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional description..." rows={2} style={{ ...S.input, resize: "vertical" }} />
@@ -788,7 +817,7 @@ function CoursesView({ token }) {
         : (
           <div style={S.card}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr>{["Course","Code","Semester","Branch","Faculty","Students","Actions"].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+              <thead><tr>{["Course","Code","Semester","Branch","Slot","Category","Capacity","Faculty","Students","Actions"].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
               <tbody>
                 {courses.map(c => (
                   <tr key={c._id}>
@@ -796,6 +825,13 @@ function CoursesView({ token }) {
                     <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{c.code}</td>
                     <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>Sem {c.semester}</td>
                     <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{c.branch}</td>
+                    <td style={{ ...S.td, color: "#a5b4fc", fontSize: 12, fontWeight: 600 }}>{c.slot || "—"}</td>
+                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
+                      <span style={{ ...S.badge, padding: "2px 6px", background: c.category === "elective" ? "rgba(245,158,11,0.12)" : "rgba(34,197,94,0.12)", color: c.category === "elective" ? "#fcd34d" : "#86efac" }}>
+                        {c.category || "core"}
+                      </span>
+                    </td>
+                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{c.capacity || 60}</td>
                     <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{c.faculty?.name || <span style={{ color: "rgba(255,255,255,0.25)" }}>Not assigned</span>}</td>
                     <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{c.enrolledCount || 0}</td>
                     <td style={{ ...S.td, display: "flex", gap: 8 }}>
@@ -1184,6 +1220,209 @@ function Empty({ message }) {
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 160, gap: 10 }}>
       <span style={{ fontSize: 36 }}>📭</span>
       <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, textAlign: "center" }}>{message}</p>
+    </div>
+  );
+}
+
+function RegistrationWindowsView({ token }) {
+  const [windows, setWindows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [form, setForm] = useState({
+    semester: "",
+    branch: "all",
+    startDate: "",
+    endDate: "",
+    minCredits: 12,
+    maxCredits: 24,
+    isActive: true
+  });
+
+  const load = useCallback(() => {
+    setLoading(true);
+    API.get("/courses/registration/windows", h(token))
+      .then(res => {
+        setWindows(Array.isArray(res.data) ? res.data : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const resetForm = () => {
+    setForm({
+      semester: "",
+      branch: "all",
+      startDate: "",
+      endDate: "",
+      minCredits: 12,
+      maxCredits: 24,
+      isActive: true
+    });
+    setEditId(null);
+    setShowForm(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.semester || !form.startDate || !form.endDate) {
+      setMsg("Please enter semester, start date, and end date.");
+      return;
+    }
+
+    try {
+      if (editId) {
+        await API.put(`/courses/registration/windows/${editId}`, form, h(token));
+        setMsg("Registration window updated!");
+      } else {
+        await API.post("/courses/registration/windows", form, h(token));
+        setMsg("Registration window opened!");
+      }
+      resetForm();
+      load();
+    } catch (e) {
+      setMsg(e.response?.data?.message || "Failed to save registration window.");
+    }
+  };
+
+  const handleEdit = (w) => {
+    const formatForInput = (dStr) => {
+      if (!dStr) return "";
+      const d = new Date(dStr);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    setForm({
+      semester: w.semester,
+      branch: w.branch || "all",
+      startDate: formatForInput(w.startDate),
+      endDate: formatForInput(w.endDate),
+      minCredits: w.minCredits || 12,
+      maxCredits: w.maxCredits || 24,
+      isActive: w.isActive !== undefined ? w.isActive : true
+    });
+    setEditId(w._id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this registration window?")) return;
+    try {
+      await API.delete(`/courses/registration/windows/${id}`, h(token));
+      setMsg("Window deleted!");
+      load();
+    } catch {
+      setMsg("Failed to delete.");
+    }
+  };
+
+  if (loading) return <Loader />;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <PageHeader title="Course Registration Windows" sub="Manage active enrollment periods for branches and semesters." />
+        <button type="button" onClick={() => { resetForm(); setShowForm(true); }} style={S.primaryBtn}>+ New Window</button>
+      </div>
+
+      {msg && <div style={{ padding: "10px 16px", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 10, color: "#86efac", fontSize: 13 }}>{msg}</div>}
+
+      {showForm && (
+        <div style={{ ...S.card, border: "1px solid rgba(99,102,241,0.3)" }}>
+          <div style={S.cardHead}>
+            <span style={S.cardTitle}>{editId ? "Edit Window" : "Open New Registration Window"}</span>
+            <button type="button" onClick={resetForm} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 18 }}>✕</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div>
+              <label style={S.label}>Target Semester *</label>
+              <select value={form.semester} onChange={e => setForm(p => ({ ...p, semester: Number(e.target.value) }))} style={S.select}>
+                <option value="">Select</option>
+                {[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s}>Semester {s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>Target Branch *</label>
+              <input value={form.branch} onChange={e => setForm(p => ({ ...p, branch: e.target.value }))} placeholder="e.g. CSE or all" style={S.input} />
+            </div>
+            <div>
+              <label style={S.label}>Start Date & Time *</label>
+              <input type="datetime-local" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))} style={S.input} />
+            </div>
+            <div>
+              <label style={S.label}>End Date & Time *</label>
+              <input type="datetime-local" value={form.endDate} onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))} style={S.input} />
+            </div>
+            <div>
+              <label style={S.label}>Minimum Credits Allowance</label>
+              <input type="number" value={form.minCredits} onChange={e => setForm(p => ({ ...p, minCredits: Number(e.target.value) }))} placeholder="12" style={S.input} />
+            </div>
+            <div>
+              <label style={S.label}>Maximum Credits Allowance</label>
+              <input type="number" value={form.maxCredits} onChange={e => setForm(p => ({ ...p, maxCredits: Number(e.target.value) }))} placeholder="24" style={S.input} />
+            </div>
+            <div style={{ gridColumn: "1/-1", display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+              <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} style={{ cursor: "pointer" }} />
+              <label htmlFor="isActive" style={{ ...S.label, margin: 0, cursor: "pointer" }}>Set Registration Window Active immediately</label>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <button type="button" onClick={handleSubmit} style={S.primaryBtn}>{editId ? "Update Window" : "Open Window"}</button>
+            <button type="button" onClick={resetForm} style={S.secondaryBtn}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {windows.length === 0 ? (
+        <Empty message="No active registration windows. Create one to allow students to enroll!" />
+      ) : (
+        <div style={S.card}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["Semester", "Branch", "Start Date", "End Date", "Credits Bound", "Status", "Actions"].map(h => <th key={h} style={S.th}>{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {windows.map(w => {
+                const now = new Date();
+                const start = new Date(w.startDate);
+                const end = new Date(w.endDate);
+                const isLive = w.isActive && start <= now && end >= now;
+                const isEnded = end < now;
+
+                return (
+                  <tr key={w._id}>
+                    <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0" }}>Semester {w.semester}</td>
+                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{w.branch}</td>
+                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{start.toLocaleString()}</td>
+                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{end.toLocaleString()}</td>
+                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{w.minCredits} - {w.maxCredits} Cr</td>
+                    <td style={{ ...S.td }}>
+                      <span style={{ 
+                        ...S.badge, 
+                        background: isLive ? "rgba(34,197,94,0.15)" : isEnded ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.15)", 
+                        color: isLive ? "#86efac" : isEnded ? "#fca5a5" : "#fcd34d" 
+                      }}>
+                        {isLive ? "Live" : isEnded ? "Ended" : w.isActive ? "Scheduled" : "Paused"}
+                      </span>
+                    </td>
+                    <td style={{ ...S.td }}>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button type="button" onClick={() => handleEdit(w)} style={{ padding: "4px 12px", borderRadius: 7, border: "1px solid rgba(99,102,241,0.3)", background: "rgba(99,102,241,0.1)", color: "#a5b4fc", fontFamily: "inherit", fontSize: 12, cursor: "pointer" }}>Edit</button>
+                        <button type="button" onClick={() => handleDelete(w._id)} style={{ padding: "4px 12px", borderRadius: 7, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.1)", color: "#fca5a5", fontFamily: "inherit", fontSize: 12, cursor: "pointer" }}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
