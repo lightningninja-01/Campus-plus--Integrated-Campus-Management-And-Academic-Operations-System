@@ -181,7 +181,7 @@ const seedDatabase = async () => {
 
       // Electives (4 options * 2 credits, choose 1)
       { name: "Wireless Communication", code: "EC703", credits: 2, semester: 7, branch: "ECE", department: "ECE", slot: "C2", capacity: 60, category: "elective", faculty: fLovelace._id, description: "Cellular signal propagation models, MIMO systems, and 5G cellular networks." },
-      { name: "Satellite Communication", code: "EC707", credits: 2, semester: 7, branch: "ECE", department: "ECE", slot: "G2", capacity: 60, category: "elective", faculty: fShannon._id, description: "Orbital coordinates, link calculations, transponder architectures, and GPS." },
+      { name: "Satellite Communication", code: "EC707", credits: 2, semester: 7, branch: "ECE", department: "ECE", slot: "G2", capacity: 60, category: "elective", faculty: fShockley._id, description: "Orbital coordinates, link calculations, transponder architectures, and GPS." },
       { name: "Fiber Optic Networks", code: "EC708", credits: 2, semester: 7, branch: "ECE", department: "ECE", slot: "H2", capacity: 60, category: "elective", faculty: fLovelace._id, description: "Total internal reflection, dispersion, laser emitters, and wavelength routing." },
       { name: "Neural Networks for ECE", code: "EC709", credits: 2, semester: 7, branch: "ECE", department: "ECE", slot: "I2", capacity: 60, category: "elective", faculty: fTuring._id, description: "Analog hardware neuron modeling, feedforward maps, and perceptrons." },
 
@@ -197,7 +197,7 @@ const seedDatabase = async () => {
       { name: "Automobile Engineering", code: "ME706", credits: 2, semester: 7, branch: "ME", department: "ME", slot: "C2", capacity: 60, category: "elective", faculty: fDiesel._id, description: "Chassis design, ICE cycles, power transmissions, and braking dynamics." },
       { name: "Robotics and Automation", code: "ME707", credits: 2, semester: 7, branch: "ME", department: "ME", slot: "G2", capacity: 60, category: "elective", faculty: fTesla._id, description: "Kinematics, trajectory generation, servo motors, and robotic actuators." },
       { name: "Power Plant Engineering", code: "ME708", credits: 2, semester: 7, branch: "ME", department: "ME", slot: "H2", capacity: 60, category: "elective", faculty: fFord._id, description: "Steam and gas power plants, hydroelectric stations, and eco considerations." },
-      { name: "Gas Turbines & Jet Propulsion", code: "ME709", credits: 2, semester: 7, branch: "ME", department: "ME", slot: "I2", capacity: 60, category: "elective", faculty: fDiesel._id, description: "Brayton cycle, centrifugal compressors, rocket propulsion, and nozzle designs." },
+      { name: "Gas Turbines & Jet Propulsion", code: "ME709", credits: 2, semester: 7, branch: "ME", department: "ME", slot: "I2", capacity: 60, category: "elective", faculty: fOtto._id, description: "Brayton cycle, centrifugal compressors, rocket propulsion, and nozzle designs." },
 
       // ── CSE Semester 3 ──
       // Cores (5 courses)
@@ -209,7 +209,7 @@ const seedDatabase = async () => {
 
       // ── ECE Semester 3 ──
       // Cores (5 courses)
-      { name: "Network Theory", code: "EC301", credits: 3, semester: 3, branch: "ECE", department: "ECE", slot: "A2", capacity: 60, category: "core", faculty: fShannon._id, description: "Kirchhoff laws, node/mesh linear loop solving, and active filter topologies." },
+      { name: "Network Theory", code: "EC301", credits: 3, semester: 3, branch: "ECE", department: "ECE", slot: "A2", capacity: 60, category: "core", faculty: fBrattain._id, description: "Kirchhoff laws, node/mesh linear loop solving, and active filter topologies." },
       { name: "Electronic Devices", code: "EC302", credits: 3, semester: 3, branch: "ECE", department: "ECE", slot: "B2", capacity: 60, category: "core", faculty: fBardeen._id, description: "Semiconductor physics, PN junction diodes, BJT operation, and MOSFET equations." },
       { name: "Signals and Systems", code: "EC303", credits: 3, semester: 3, branch: "ECE", department: "ECE", slot: "C2", capacity: 60, category: "core", faculty: fBrattain._id, description: "Continuous and discrete signals, LTI systems, Fourier transform, and Laplace transforms." },
       { name: "Analog Circuits", code: "EC304", credits: 3, semester: 3, branch: "ECE", department: "ECE", slot: "D2", capacity: 60, category: "core", faculty: fShockley._id, description: "Biasing circuits, small-signal models, op-amps, feedback topologies, and oscillators." },
