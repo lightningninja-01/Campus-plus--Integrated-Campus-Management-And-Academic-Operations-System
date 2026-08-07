@@ -29,7 +29,7 @@ resultSchema.pre("save", function (next) {
   else if (p >= 50) this.grade = "C";
   else if (p >= 40) this.grade = "D";
   else this.grade = "F";
-  next();
+  if (typeof next === "function") next();
 });
 
 module.exports = mongoose.model("Result", resultSchema);
