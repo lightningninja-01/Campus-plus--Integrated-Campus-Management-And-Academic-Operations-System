@@ -274,21 +274,24 @@ const seedDatabase = async () => {
     await Notice.create([
       {
         title: "End Semester Exams Timetable Released",
-        content: "The end-semester exam timetable is available on the main college board. Exams will commence from November 15th.",
-        audience: "all",
-        postedBy: admin._id
+        body: "The end-semester exam timetable is available on the main college board. Exams will commence from November 15th.",
+        category: "exam",
+        targetRole: "all",
+        createdBy: admin._id
       },
       {
         title: "Machine Learning Lab Submission Extension",
-        content: "Students can submit their Machine Learning Lab report by next Monday. No further extension requests will be entertained.",
-        audience: "student",
-        postedBy: alan._id
+        body: "Students can submit their Machine Learning Lab report by next Monday. No further extension requests will be entertained.",
+        category: "general",
+        targetRole: "student",
+        createdBy: alan._id
       },
       {
         title: "Faculty Meeting with Dean in Main Seminar Hall",
-        content: "All department faculty are requested to assemble in the Main Seminar Hall today at 3:00 PM for the annual review meeting.",
-        audience: "faculty",
-        postedBy: admin._id
+        body: "All department faculty are requested to assemble in the Main Seminar Hall today at 3:00 PM for the annual review meeting.",
+        category: "general",
+        targetRole: "faculty",
+        createdBy: admin._id
       }
     ]);
     console.log("Created notices.");
@@ -299,20 +302,16 @@ const seedDatabase = async () => {
         title: "Gradient Descent Implementation",
         description: "Implement Batch and Stochastic Gradient Descent from scratch in Python. Do not use sklearn.",
         course: mlCourse._id,
-        courseName: mlCourse.name,
-        courseCode: mlCourse.code,
         faculty: alan._id,
-        maxMarks: 100,
+        totalMarks: 100,
         dueDate: fourDaysLater
       },
       {
         title: "Raft Consensus Design",
         description: "Write a design document detailing the leader election and log replication mechanisms in your Raft implementation.",
         course: dsCourse._id,
-        courseName: dsCourse.name,
-        courseCode: dsCourse.code,
         faculty: grace._id,
-        maxMarks: 100,
+        totalMarks: 100,
         dueDate: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000)
       }
     ]);
@@ -323,41 +322,33 @@ const seedDatabase = async () => {
       {
         student: ujjwal._id,
         course: mlCourse._id,
-        courseName: "Computer Networks",
-        courseCode: "CS601",
         semester: 6,
-        marks: 88,
-        grade: "A",
+        totalMarks: 88,
+        maxMarks: 100,
         uploadedBy: alan._id
       },
       {
         student: ujjwal._id,
         course: dsCourse._id,
-        courseName: "Compiler Design",
-        courseCode: "CS602",
         semester: 6,
-        marks: 95,
-        grade: "S",
+        totalMarks: 95,
+        maxMarks: 100,
         uploadedBy: grace._id
       },
       {
         student: ujjwal._id,
         course: cloudCourse._id,
-        courseName: "Software Engineering",
-        courseCode: "CS603",
         semester: 6,
-        marks: 74,
-        grade: "B",
+        totalMarks: 74,
+        maxMarks: 100,
         uploadedBy: alan._id
       },
       {
         student: amit._id,
         course: mlCourse._id,
-        courseName: "Computer Networks",
-        courseCode: "CS601",
         semester: 6,
-        marks: 80,
-        grade: "A",
+        totalMarks: 80,
+        maxMarks: 100,
         uploadedBy: alan._id
       }
     ]);
