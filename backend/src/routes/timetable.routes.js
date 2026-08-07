@@ -69,7 +69,7 @@ const buildCourseRequests = (courses) => (
 const generateEntries = (courseRequests, settings) => {
   const assignments = {};
   const facultyBusyPeriods = new Set();
-  const groupBusyPeriods = new Set();
+  const groupBusySlots = {}; // format: `${groupKey}_${day}_${period}` -> Array of courses
   const roomBusyPeriods = new Set();
 
   const preAssigned = courseRequests.filter(r => r.course.slot && SLOT_MAP[r.course.slot]);
@@ -90,8 +90,21 @@ const generateEntries = (courseRequests, settings) => {
       if (!settings.days.includes(session.day)) return null;
 
       const fKey = `${facultyId}_${session.day}_${session.period}`;
+      if (facultyBusyPeriods.has(fKey)) {
+        return null;
+      }
+
+      // Group conflict bounds (allow parallel electives/VACs, block core conflicts)
       const gKey = `${groupKey}_${session.day}_${session.period}`;
-      if (facultyBusyPeriods.has(fKey) || groupBusyPeriods.has(gKey)) {
+      const scheduled = groupBusySlots[gKey] || [];
+
+      if ((course.category || "core") === "core" && scheduled.length > 0) {
+        return null;
+      }
+      if (scheduled.some(c => (c.category || "core") === "core")) {
+        return null;
+      }
+      if (scheduled.some(c => (c.category || "core") !== (course.category || "core"))) {
         return null;
       }
     }
@@ -117,7 +130,11 @@ const generateEntries = (courseRequests, settings) => {
     if (!testOnly) {
       for (const session of sessions) {
         facultyBusyPeriods.add(`${facultyId}_${session.day}_${session.period}`);
-        groupBusyPeriods.add(`${groupKey}_${session.day}_${session.period}`);
+        
+        const gKey = `${groupKey}_${session.day}_${session.period}`;
+        if (!groupBusySlots[gKey]) groupBusySlots[gKey] = [];
+        groupBusySlots[gKey].push(course);
+
         roomBusyPeriods.add(`${selectedRoom}_${session.day}_${session.period}`);
       }
     }
@@ -131,7 +148,15 @@ const generateEntries = (courseRequests, settings) => {
     const groupKey = `${course.branch}_${course.semester}`;
     for (const session of sessions) {
       facultyBusyPeriods.delete(`${facultyId}_${session.day}_${session.period}`);
-      groupBusyPeriods.delete(`${groupKey}_${session.day}_${session.period}`);
+      
+      const gKey = `${groupKey}_${session.day}_${session.period}`;
+      if (groupBusySlots[gKey]) {
+        groupBusySlots[gKey] = groupBusySlots[gKey].filter(c => String(c._id || c) !== String(course._id || course));
+        if (groupBusySlots[gKey].length === 0) {
+          delete groupBusySlots[gKey];
+        }
+      }
+
       roomBusyPeriods.delete(`${room}_${session.day}_${session.period}`);
     }
   };
