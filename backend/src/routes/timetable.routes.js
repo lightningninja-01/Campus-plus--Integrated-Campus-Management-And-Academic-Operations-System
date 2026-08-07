@@ -31,6 +31,8 @@ const normalizeGeneratorSettings = (body = {}) => {
     startMinute: Number.isFinite(Number(body.startMinute)) ? Number(body.startMinute) : 0,
     slotMinutes: Math.max(30, Number(body.slotMinutes) || 60),
     rooms,
+    lunchBreak: Number(body.lunchBreak) || 0,
+    customSlots: String(body.customSlots || "").trim()
   };
 };
 
@@ -71,19 +73,72 @@ const buildCourseRequests = (courses) => (
   }))
 );
 
+const parseCustomSlots = (slotStr) => {
+  const map = {};
+  if (!slotStr) return map;
+  const slots = slotStr.split(";").map(s => s.trim()).filter(Boolean);
+  for (const slot of slots) {
+    const parts = slot.split(":");
+    if (parts.length !== 2) continue;
+    const key = parts[0].trim();
+    const sessionsStr = parts[1].split(",").map(ss => ss.trim()).filter(Boolean);
+    const sessions = [];
+    for (const sStr of sessionsStr) {
+      const subParts = sStr.split(/\s+/);
+      if (subParts.length < 2) continue;
+      let dayInput = subParts[0].trim();
+      const period = parseInt(subParts[1].trim(), 10);
+      if (isNaN(period)) continue;
+      
+      let day = "Monday";
+      const lower = dayInput.toLowerCase();
+      if (lower.startsWith("mon")) day = "Monday";
+      else if (lower.startsWith("tue")) day = "Tuesday";
+      else if (lower.startsWith("wed")) day = "Wednesday";
+      else if (lower.startsWith("thu")) day = "Thursday";
+      else if (lower.startsWith("fri")) day = "Friday";
+      else if (lower.startsWith("sat")) day = "Saturday";
+      else if (lower.startsWith("sun")) day = "Sunday";
+      
+      sessions.push({ day, period });
+    }
+    if (sessions.length > 0) {
+      map[key] = sessions;
+    }
+  }
+  return map;
+};
+
 const generateEntries = (courseRequests, settings) => {
   const assignments = {};
   const facultyBusyPeriods = new Set();
   const groupBusySlots = {}; // format: `${groupKey}_${day}_${period}` -> Array of courses
   const roomBusyPeriods = new Set();
 
-  const preAssigned = courseRequests.filter(r => r.course.slot && SLOT_MAP[r.course.slot]);
-  const initialUnassigned = courseRequests.filter(r => !r.course.slot || !SLOT_MAP[r.course.slot]);
+  // Initialize slot map dynamically
+  let activeSlotMap = { ...SLOT_MAP };
+  if (settings.customSlots) {
+    const parsed = parseCustomSlots(settings.customSlots);
+    if (Object.keys(parsed).length > 0) {
+      activeSlotMap = parsed;
+    }
+  }
+
+  // Filter out any sessions falling inside lunchBreak
+  if (settings.lunchBreak) {
+    const breakPeriod = Number(settings.lunchBreak);
+    for (const key of Object.keys(activeSlotMap)) {
+      activeSlotMap[key] = activeSlotMap[key].filter(s => s.period !== breakPeriod);
+    }
+  }
+
+  const preAssigned = courseRequests.filter(r => r.course.slot && activeSlotMap[r.course.slot]);
+  const initialUnassigned = courseRequests.filter(r => !r.course.slot || !activeSlotMap[r.course.slot]);
   const unassigned = [...initialUnassigned];
   const warnings = [];
 
   const checkAndPlaceSlot = (course, slotKey, testOnly = false) => {
-    const sessions = SLOT_MAP[slotKey];
+    const sessions = activeSlotMap[slotKey];
     const facultyId = String(course.faculty._id || course.faculty);
     const groupKey = `${course.branch}_${course.semester}`;
 
@@ -147,7 +202,7 @@ const generateEntries = (courseRequests, settings) => {
   };
 
   const removeSlotAllocation = (course, slotKey, room) => {
-    const sessions = SLOT_MAP[slotKey];
+    const sessions = activeSlotMap[slotKey];
     const facultyId = String(course.faculty._id || course.faculty);
     const groupKey = `${course.branch}_${course.semester}`;
     for (const session of sessions) {
@@ -184,7 +239,7 @@ const generateEntries = (courseRequests, settings) => {
     if (index >= unassigned.length) return true;
 
     const req = unassigned[index];
-    const slotKeys = Object.keys(SLOT_MAP);
+    const slotKeys = Object.keys(activeSlotMap);
 
     for (const slotKey of slotKeys) {
       const room = checkAndPlaceSlot(req.course, slotKey, false);
@@ -216,7 +271,7 @@ const generateEntries = (courseRequests, settings) => {
     }
     roomBusyPeriods.clear();
 
-    const slotKeys = Object.keys(SLOT_MAP);
+    const slotKeys = Object.keys(activeSlotMap);
 
     for (const req of unassigned) {
       let bestSlot = null;
@@ -225,7 +280,7 @@ const generateEntries = (courseRequests, settings) => {
       let bestWarnings = [];
 
       for (const slotKey of slotKeys) {
-        const sessions = SLOT_MAP[slotKey];
+        const sessions = activeSlotMap[slotKey];
         const facultyId = String(req.course.faculty._id || req.course.faculty);
         const groupKey = `${req.course.branch}_${req.course.semester}`;
         
@@ -298,7 +353,7 @@ const generateEntries = (courseRequests, settings) => {
       warnings.push(...bestWarnings);
 
       // Mark busy
-      const sessions = SLOT_MAP[bestSlot];
+      const sessions = activeSlotMap[bestSlot];
       const facultyId = String(req.course.faculty._id || req.course.faculty);
       const groupKey = `${req.course.branch}_${req.course.semester}`;
       for (const session of sessions) {
@@ -339,7 +394,7 @@ const generateEntries = (courseRequests, settings) => {
       room: assign.room
     });
 
-    const sessions = SLOT_MAP[assign.slotKey];
+    const sessions = activeSlotMap[assign.slotKey];
     for (const session of sessions) {
       if (session.period > settings.periodsPerDay) continue;
 

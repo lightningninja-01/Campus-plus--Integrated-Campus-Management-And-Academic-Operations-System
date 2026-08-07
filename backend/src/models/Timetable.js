@@ -83,6 +83,8 @@ const timetableSchema = new mongoose.Schema(
       startMinute: { type: Number, required: true, min: 0, max: 59, default: 0 },
       slotMinutes: { type: Number, required: true, min: 30, default: 60 },
       rooms: [{ type: String, required: true }],
+      lunchBreak: { type: Number, default: 0 },
+      customSlots: { type: String, default: "" },
     },
     entries: [timetableEntrySchema],
     isActive: {

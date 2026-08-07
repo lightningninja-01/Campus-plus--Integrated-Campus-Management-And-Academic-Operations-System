@@ -67,10 +67,16 @@ export default function TimetableBoard({
                   <td style={DAY_TD}>{day}</td>
                   {Array.from({ length: periodsPerDay }, (_, index) => {
                     const period = index + 1;
+                    const isLunch = settings?.lunchBreak === period;
                     const entry = grouped.get(`${day}-${period}`);
                     return (
                       <td key={`${day}-${period}`} style={CELL_TD}>
-                        {entry ? (
+                        {isLunch ? (
+                          <div style={LUNCH_CARD}>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#fef08a" }}>🍴 Lunch Break</p>
+                            <p style={{ margin: "4px 0 0", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Recess period</p>
+                          </div>
+                        ) : entry ? (
                           <div style={CELL_CARD}>
                             <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>{entry.courseCode}</p>
                             <p style={{ margin: "3px 0 0", fontSize: 12, color: "rgba(255,255,255,0.7)" }}>{entry.courseName}</p>
@@ -137,4 +143,17 @@ const EMPTY_SLOT = {
   justifyContent: "center",
   color: "rgba(255,255,255,0.22)",
   fontSize: 12,
+};
+
+const LUNCH_CARD = {
+  background: "linear-gradient(135deg, rgba(234,179,8,0.1) 0%, rgba(234,179,8,0.02) 100%)",
+  border: "1px dashed rgba(234,179,8,0.3)",
+  borderRadius: 12,
+  padding: "12px 12px 10px",
+  minHeight: 92,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  textAlign: "center"
 };

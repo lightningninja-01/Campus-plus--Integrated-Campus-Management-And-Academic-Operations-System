@@ -927,7 +927,9 @@ function TimetableAdminView({ token }) {
     startHour: 9,
     startMinute: 0,
     slotMinutes: 60,
-    rooms: "Room 101,Room 102,Room 103,Room 104,Room 201,Room 202,Room 203,Room 204,Lab 101,Lab 102,Lab 201,Lab 202",
+    rooms: "Room 101,Room 102,Room 103,Room 104,Room 201,Room 202,Room 203,Room 204,Room 301,Room 302,Room 303,Room 304,Lab 101,Lab 102,Lab 201,Lab 202,Lab 301,Lab 302,Seminar Hall 1,Seminar Hall 2,Auditorium 1,Auditorium 2",
+    lunchBreak: 0,
+    customSlots: "A1: Mon 1, Wed 1, Fri 1; B1: Mon 2, Wed 2, Fri 2; C1: Mon 3, Wed 3, Fri 3; D1: Tue 1, Thu 1, Mon 5; E1: Tue 2, Thu 2, Wed 5; F1: Tue 3, Thu 3, Fri 5; A2: Mon 4, Wed 4, Fri 4; B2: Tue 4, Thu 4, Mon 6; C2: Tue 5, Thu 5, Wed 6; D2: Tue 6, Thu 6, Fri 6; G1: Mon 4, Wed 4; H1: Tue 4, Thu 4; I1: Mon 5, Wed 5; J1: Tue 5, Thu 5; K1: Mon 6, Wed 6; G2: Mon 4, Wed 4; H2: Tue 4, Thu 4; I2: Mon 5, Wed 5; J2: Tue 5, Thu 5; K2: Mon 6, Wed 6",
   });
 
   const load = useCallback(() => {
@@ -968,6 +970,8 @@ function TimetableAdminView({ token }) {
         startMinute: Number(form.startMinute),
         slotMinutes: Number(form.slotMinutes),
         rooms: form.rooms.split(",").map((item) => item.trim()).filter(Boolean),
+        lunchBreak: Number(form.lunchBreak),
+        customSlots: form.customSlots,
       };
 
       const result = await timetableAPI.generate(payload, token);
@@ -1051,6 +1055,32 @@ function TimetableAdminView({ token }) {
           <div style={{ gridColumn: "1/-1" }}>
             <label style={S.label}>Available Rooms</label>
             <input value={form.rooms} onChange={(e) => setForm((p) => ({ ...p, rooms: e.target.value }))} placeholder="Room 101,Room 102,Lab 201" style={S.input} />
+          </div>
+          <div>
+            <label style={S.label}>Lunch Break Period</label>
+            <select value={form.lunchBreak} onChange={(e) => setForm((p) => ({ ...p, lunchBreak: e.target.value }))} style={S.select}>
+              <option value="0">None</option>
+              <option value="3">Period 3</option>
+              <option value="4">Period 4</option>
+              <option value="5">Period 5</option>
+            </select>
+          </div>
+          <div>
+            <label style={S.label}>Exclusion presets or configuration</label>
+            <select onChange={(e) => {
+              if (e.target.value === "standard") {
+                setForm(p => ({ ...p, customSlots: "A1: Mon 1, Wed 1, Fri 1; B1: Mon 2, Wed 2, Fri 2; C1: Mon 3, Wed 3, Fri 3; D1: Tue 1, Thu 1, Mon 5; E1: Tue 2, Thu 2, Wed 5; F1: Tue 3, Thu 3, Fri 5; A2: Mon 4, Wed 4, Fri 4; B2: Tue 4, Thu 4, Mon 6; C2: Tue 5, Thu 5, Wed 6; D2: Tue 6, Thu 6, Fri 6; G1: Mon 4, Wed 4; H1: Tue 4, Thu 4; I1: Mon 5, Wed 5; J1: Tue 5, Thu 5; K1: Mon 6, Wed 6; G2: Mon 4, Wed 4; H2: Tue 4, Thu 4; I2: Mon 5, Wed 5; J2: Tue 5, Thu 5; K2: Mon 6, Wed 6" }));
+              } else if (e.target.value === "dense8") {
+                setForm(p => ({ ...p, periodsPerDay: 8, customSlots: "A1: Mon 1, Wed 1, Fri 1; B1: Mon 2, Wed 2, Fri 2; C1: Mon 3, Wed 3, Fri 3; D1: Tue 1, Thu 1, Fri 4; E1: Tue 2, Thu 2, Fri 5; F1: Tue 3, Thu 3, Fri 6; G1: Mon 4, Wed 4, Fri 7; H1: Tue 4, Thu 4, Fri 8; A2: Mon 5, Wed 5; B2: Tue 5, Thu 5; C2: Mon 6, Wed 6; D2: Tue 6, Thu 6; E2: Mon 7, Wed 7; F2: Tue 7, Thu 7; I1: Mon 8, Wed 8; J1: Tue 8, Thu 8; K1: Fri 1, Fri 2" }));
+              }
+            }} style={S.select}>
+              <option value="standard">Standard 6-Period Split</option>
+              <option value="dense8">High-Density 8-Period Split</option>
+            </select>
+          </div>
+          <div style={{ gridColumn: "1/-1" }}>
+            <label style={S.label}>Custom Slot Mappings (Delimiter: ";" for slots, "," for sessions, space for day/period)</label>
+            <textarea value={form.customSlots} onChange={(e) => setForm((p) => ({ ...p, customSlots: e.target.value }))} placeholder="A1: Mon 1, Wed 1, Fri 1; B1: Mon 2, Wed 2..." style={{ ...S.input, height: 100, fontFamily: "monospace", fontSize: 12, resize: "vertical" }} />
           </div>
         </div>
         <p style={{ margin: "14px 0 0", fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
