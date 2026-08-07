@@ -51,17 +51,17 @@ const SLOT_MAP = {
   "E2": [{ day: "Monday", period: 6 }, { day: "Wednesday", period: 6 }],
   "F2": [{ day: "Tuesday", period: 6 }, { day: "Thursday", period: 6 }],
 
-  // ── Synonyms / Alt bindings to prevent clashes ──
-  "G1": [{ day: "Monday", period: 7 }, { day: "Wednesday", period: 7 }],
-  "H1": [{ day: "Tuesday", period: 7 }, { day: "Thursday", period: 7 }],
-  "I1": [{ day: "Friday", period: 7 }, { day: "Monday", period: 7 }],
-  "J1": [{ day: "Monday", period: 6 }, { day: "Wednesday", period: 6 }],
-  "K1": [{ day: "Tuesday", period: 6 }, { day: "Thursday", period: 6 }],
-  "G2": [{ day: "Monday", period: 7 }, { day: "Wednesday", period: 7 }],
-  "H2": [{ day: "Tuesday", period: 7 }, { day: "Thursday", period: 7 }],
-  "I2": [{ day: "Friday", period: 7 }, { day: "Monday", period: 7 }],
-  "J2": [{ day: "Monday", period: 6 }, { day: "Wednesday", period: 6 }],
-  "K2": [{ day: "Friday", period: 7 }]
+  // ── Synonyms / Alt bindings mapped to fit in 6 periods ──
+  "G1": [{ day: "Monday", period: 4 }, { day: "Wednesday", period: 4 }],
+  "H1": [{ day: "Tuesday", period: 4 }, { day: "Thursday", period: 4 }],
+  "I1": [{ day: "Monday", period: 5 }, { day: "Wednesday", period: 5 }],
+  "J1": [{ day: "Tuesday", period: 5 }, { day: "Thursday", period: 5 }],
+  "K1": [{ day: "Monday", period: 6 }, { day: "Wednesday", period: 6 }],
+  "G2": [{ day: "Monday", period: 4 }, { day: "Wednesday", period: 4 }],
+  "H2": [{ day: "Tuesday", period: 4 }, { day: "Thursday", period: 4 }],
+  "I2": [{ day: "Monday", period: 5 }, { day: "Wednesday", period: 5 }],
+  "J2": [{ day: "Tuesday", period: 5 }, { day: "Thursday", period: 5 }],
+  "K2": [{ day: "Monday", period: 6 }]
 };
 
 const buildCourseRequests = (courses) => (
