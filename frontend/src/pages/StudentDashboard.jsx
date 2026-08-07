@@ -58,9 +58,6 @@ export default function StudentDashboard() {
     try {
       const data = await courseAPI.getRegistrationStatus(token);
       setRegStatus(data);
-      if (data && data.isOpen && data.currentCredits < data.minCredits) {
-        setActive("registration");
-      }
     } catch (err) {
       console.error(err);
     }
@@ -89,28 +86,20 @@ export default function StudentDashboard() {
         <nav style={S.nav}>
           {NAV.map(({ key, label, icon }) => {
             const on = active === key;
-            const isLocked = regStatus && regStatus.isOpen && regStatus.currentCredits < regStatus.minCredits && key !== "registration";
 
             return (
               <button
                 key={key}
                 type="button"
-                onClick={() => {
-                  if (isLocked) {
-                    alert(`Course Registration is open! You must register for at least ${regStatus.minCredits} credits (currently ${regStatus.currentCredits} Cr) before you can access other sections.`);
-                    return;
-                  }
-                  setActive(key);
-                }}
-                disabled={isLocked}
+                onClick={() => setActive(key)}
                 style={{
                   ...S.navBtn,
                   background: on ? "rgba(99,102,241,0.18)" : "transparent",
-                  color: isLocked ? "rgba(255,255,255,0.15)" : on ? "#a5b4fc" : "rgba(255,255,255,0.55)",
+                  color: on ? "#a5b4fc" : "rgba(255,255,255,0.55)",
                   borderLeft: on ? "2px solid #6366f1" : "2px solid transparent",
                   justifyContent: sidebarOpen ? "flex-start" : "center",
-                  cursor: isLocked ? "not-allowed" : "pointer",
-                  opacity: isLocked ? 0.35 : 1,
+                  cursor: "pointer",
+                  opacity: 1,
                 }}
               >
                 <span style={{ flexShrink: 0, display: "flex" }}>{icon()}</span>
@@ -158,7 +147,7 @@ export default function StudentDashboard() {
 
         {/* Content */}
         <div style={S.content}>
-          {active === "dashboard"   && <DashView greeting={greeting} firstName={firstName} user={user} token={token} setActive={setActive} />}
+          {active === "dashboard"   && <DashView greeting={greeting} firstName={firstName} user={user} token={token} setActive={setActive} regStatus={regStatus} />}
           {active === "courses"     && <CoursesView token={token} />}
           {active === "registration" && <RegistrationView token={token} onEnrollChange={fetchRegStatus} />}
           {active === "timetable"   && <TimetableView token={token} user={user} />}
@@ -207,7 +196,7 @@ function TimetableView({ token, user }) {
 }
 
 // ─── Dashboard Overview ───────────────────────────────────────────────────────
-function DashView({ greeting, firstName, user, token, setActive }) {
+function DashView({ greeting, firstName, user, token, setActive, regStatus }) {
   const [courses, setCourses]         = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [notices, setNotices]         = useState([]);
@@ -244,6 +233,47 @@ function DashView({ greeting, firstName, user, token, setActive }) {
         </div>
         <span style={S.datePill}>{new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
       </div>
+
+      {/* Course Registration Warning Banner */}
+      {regStatus && regStatus.isOpen && regStatus.currentCredits < regStatus.minCredits && (
+        <div style={{
+          padding: "16px 20px",
+          background: "rgba(245,158,11,0.08)",
+          border: "1px solid rgba(245,158,11,0.2)",
+          borderRadius: 16,
+          color: "#fcd34d",
+          fontSize: 13,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 20 }}>⚠️</span>
+            <div>
+              <strong style={{ color: "#fff", display: "block", marginBottom: 2 }}>Pending Action: Course Registration is Open!</strong>
+              <span>You have only registered for {regStatus.currentCredits} of the minimum {regStatus.minCredits} credits. Please complete registration before the deadline.</span>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setActive("registration")} 
+            style={{ 
+              padding: "8px 16px", 
+              background: "#f59e0b", 
+              color: "#0f172a", 
+              fontWeight: 600, 
+              border: "none", 
+              borderRadius: 10, 
+              fontSize: 12, 
+              cursor: "pointer", 
+              whiteSpace: "nowrap" 
+            }}
+          >
+            Go to Registration
+          </button>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>

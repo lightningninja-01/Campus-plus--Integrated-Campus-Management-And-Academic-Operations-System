@@ -103,7 +103,7 @@ export default function AdminDashboard() {
         </header>
 
         <div style={S.content}>
-          {active === "dashboard" && <DashView token={token} />}
+          {active === "dashboard" && <DashView token={token} setActive={setActive} />}
           {active === "students"  && <UsersView role="student" token={token} />}
           {active === "faculty"   && <UsersView role="faculty" token={token} />}
           {active === "staff"     && <StaffAccessView token={token} />}
@@ -120,10 +120,27 @@ export default function AdminDashboard() {
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-function DashView({ token }) {
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+function DashView({ token, setActive }) {
   const [stats, setStats] = useState({ students: 0, faculty: 0, courses: 0, notices: 0 });
   const [loading, setLoading] = useState(true);
   const [recentUsers, setRecentUsers] = useState([]);
+  const [isEditingCanvas, setIsEditingCanvas] = useState(false);
+
+  const [layout, setLayout] = useState(() => {
+    const saved = localStorage.getItem("admin_canvas_layout");
+    return saved ? JSON.parse(saved) : [
+      { id: "stats", type: "stats", visible: true, size: "full", title: "Overview Stats" },
+      { id: "recent_users", type: "recent_users", visible: true, size: "half", title: "Recent Registrations" },
+      { id: "quick_actions", type: "quick_actions", visible: true, size: "half", title: "Quick Actions Panel" },
+      { id: "analytics", type: "analytics", visible: true, size: "full", title: "Registration Analytics" },
+      { id: "notes", type: "notes", visible: false, size: "half", title: "Scratchpad Notes" }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("admin_canvas_layout", JSON.stringify(layout));
+  }, [layout]);
 
   useEffect(() => {
     Promise.all([
@@ -140,43 +157,421 @@ function DashView({ token }) {
     });
   }, [token]);
 
+  const moveUp = (idx) => {
+    if (idx === 0) return;
+    setLayout(prev => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx - 1];
+      next[idx - 1] = temp;
+      return next;
+    });
+  };
+
+  const moveDown = (idx) => {
+    if (idx === layout.length - 1) return;
+    setLayout(prev => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx + 1];
+      next[idx + 1] = temp;
+      return next;
+    });
+  };
+
+  const toggleSize = (idx) => {
+    setLayout(prev => prev.map((item, i) => i === idx ? { ...item, size: item.size === "full" ? "half" : "full" } : item));
+  };
+
+  const toggleVisibility = (id) => {
+    setLayout(prev => prev.map(item => item.id === id ? { ...item, visible: !item.visible } : item));
+  };
+
+  const renameWidget = (id, title) => {
+    setLayout(prev => prev.map(item => item.id === id ? { ...item, title } : item));
+  };
+
+  const resetLayout = () => {
+    setLayout([
+      { id: "stats", type: "stats", visible: true, size: "full", title: "Overview Stats" },
+      { id: "recent_users", type: "recent_users", visible: true, size: "half", title: "Recent Registrations" },
+      { id: "quick_actions", type: "quick_actions", visible: true, size: "half", title: "Quick Actions Panel" },
+      { id: "analytics", type: "analytics", visible: true, size: "full", title: "Registration Analytics" },
+      { id: "notes", type: "notes", visible: false, size: "half", title: "Scratchpad Notes" }
+    ]);
+  };
+
   if (loading) return <Loader />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div>
-        <h1 style={S.pageTitle}>Admin Dashboard</h1>
-        <p style={S.pageSub}>Welcome back! Here's what's happening on campus.</p>
+      {/* Top Banner Toolbar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+        <div>
+          <h1 style={S.pageTitle}>Admin Dashboard</h1>
+          <p style={S.pageSub}>Welcome back! Here's what's happening on campus.</p>
+        </div>
+        <button 
+          type="button" 
+          onClick={() => setIsEditingCanvas(!isEditingCanvas)}
+          style={{ 
+            padding: "8px 16px", 
+            background: isEditingCanvas ? "rgba(16,185,129,0.18)" : "rgba(99,102,241,0.18)", 
+            border: isEditingCanvas ? "1px solid #10b981" : "1px solid rgba(99,102,241,0.3)", 
+            color: isEditingCanvas ? "#34d399" : "#a5b4fc", 
+            borderRadius: 12, 
+            fontSize: 12, 
+            fontWeight: 600, 
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            transition: "all 0.2s"
+          }}
+        >
+          {isEditingCanvas ? "💾 Save Layout" : "🛠️ Customize Canvas"}
+        </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
-        <StatCard icon="🎓" value={stats.students}  label="Total Students"  accent="#6366f1" />
-        <StatCard icon="👨‍🏫" value={stats.faculty}   label="Total Faculty"   accent="#22c55e" />
-        <StatCard icon="📚" value={stats.courses}   label="Active Courses"  accent="#f59e0b" />
-        <StatCard icon="📢" value={stats.notices}   label="Active Notices"  accent="#8b5cf6" />
-      </div>
-
-      {recentUsers.length > 0 && (
-        <div style={S.card}>
-          <div style={S.cardHead}><span style={S.cardTitle}>Recent Users</span></div>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>{["Name","Email","Role","Branch / Dept","Status"].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>
-              {recentUsers.map(u => (
-                <tr key={u._id}>
-                  <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0" }}>{u.name}</td>
-                  <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{u.email}</td>
-                  <td style={S.td}><span style={{ ...S.badge, ...(u.role === "faculty" ? { background: "rgba(34,197,94,0.15)", color: "#86efac" } : { background: "rgba(99,102,241,0.15)", color: "#a5b4fc" }) }}>{u.role}</span></td>
-                  <td style={{ ...S.td, color: "rgba(255,255,255,0.4)", fontSize: 12 }}>{u.branch || u.department || "—"}</td>
-                  <td style={S.td}><span style={{ ...S.badge, background: u.isActive ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: u.isActive ? "#86efac" : "#fca5a5" }}>{u.isActive ? "Active" : "Inactive"}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {isEditingCanvas && (
+        <div style={{ padding: "16px 20px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>🛠️ Canvas Design Studio: Active Widgets</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            {layout.map(w => (
+              <button 
+                key={w.id}
+                type="button"
+                onClick={() => toggleVisibility(w.id)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 20,
+                  fontSize: 12,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                  border: "none",
+                  background: w.visible ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.05)",
+                  color: w.visible ? "#a5b4fc" : "rgba(255,255,255,0.3)",
+                  transition: "all 0.15s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}
+              >
+                <span>{w.visible ? "👁️" : "🛇"}</span>
+                {w.title}
+              </button>
+            ))}
+            <button 
+              type="button" 
+              onClick={resetLayout} 
+              style={{
+                marginLeft: "auto",
+                padding: "5px 12px",
+                borderRadius: 20,
+                fontSize: 11,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                border: "1px solid rgba(239,68,68,0.3)",
+                background: "rgba(239,68,68,0.08)",
+                color: "#fca5a5"
+              }}
+            >
+              Reset Default
+            </button>
+          </div>
         </div>
       )}
+
+      {/* Customizable Canvas Container */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
+        {layout.map((w, idx) => {
+          if (!w.visible) return null;
+          const isFullWidth = w.size === "full";
+          
+          return (
+            <div 
+              key={w.id} 
+              style={{ 
+                width: isFullWidth ? "100%" : "calc(50% - 12px)", 
+                display: "flex", 
+                flexDirection: "column",
+                transition: "all 0.25s ease",
+                minWidth: 300,
+                border: isEditingCanvas ? "1px dashed #6366f1" : "1px solid transparent",
+                borderRadius: 16
+              }}
+            >
+              {/* Widget Header Controls */}
+              {isEditingCanvas && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(99,102,241,0.08)", borderBottom: "1px solid rgba(99,102,241,0.15)", padding: "8px 16px", borderTopLeftRadius: 16, borderTopRightRadius: 16, gap: 12 }}>
+                  <input 
+                    type="text" 
+                    value={w.title} 
+                    onChange={(e) => renameWidget(w.id, e.target.value)} 
+                    style={{ background: "none", border: "none", color: "#fff", fontWeight: 600, fontSize: 13, borderBottom: "1px dashed rgba(255,255,255,0.3)", outline: "none", width: "100%", maxWidth: 180 }} 
+                  />
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <button type="button" onClick={() => moveUp(idx)} style={S.canvasMinBtn} title="Move Up">↑</button>
+                    <button type="button" onClick={() => moveDown(idx)} style={S.canvasMinBtn} title="Move Down">↓</button>
+                    <button type="button" onClick={() => toggleSize(idx)} style={S.canvasMinBtn} title="Toggle Width">
+                      {w.size === "full" ? "Half Width" : "Full Width"}
+                    </button>
+                    <button type="button" onClick={() => toggleVisibility(w.id)} style={{ ...S.canvasMinBtn, color: "#fca5a5" }} title="Hide Widget">✕</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Real Widget Card Content */}
+              <div 
+                style={{ 
+                  ...S.card, 
+                  flex: 1, 
+                  borderTopLeftRadius: isEditingCanvas ? 0 : 16, 
+                  borderTopRightRadius: isEditingCanvas ? 0 : 16 
+                }}
+              >
+                <div style={S.cardHead}>
+                  <span style={S.cardTitle}>{w.title}</span>
+                </div>
+
+                {w.type === "stats" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 16 }}>
+                    <StatCard icon="🎓" value={stats.students}  label="Total Students"  accent="#6366f1" />
+                    <StatCard icon="👨‍🏫" value={stats.faculty}   label="Total Faculty"   accent="#22c55e" />
+                    <StatCard icon="📚" value={stats.courses}   label="Active Courses"  accent="#f59e0b" />
+                    <StatCard icon="📢" value={stats.notices}   label="Active Notices"  accent="#8b5cf6" />
+                  </div>
+                )}
+
+                {w.type === "recent_users" && recentUsers.length > 0 && (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead><tr>{["Name","Email","Role","Branch / Dept","Status"].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {recentUsers.map(u => (
+                        <tr key={u._id}>
+                          <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0" }}>{u.name}</td>
+                          <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{u.email}</td>
+                          <td style={S.td}><span style={{ ...S.badge, ...(u.role === "faculty" ? { background: "rgba(34,197,94,0.15)", color: "#86efac" } : { background: "rgba(99,102,241,0.15)", color: "#a5b4fc" }) }}>{u.role}</span></td>
+                          <td style={{ ...S.td, color: "rgba(255,255,255,0.4)", fontSize: 12 }}>{u.branch || u.department || "—"}</td>
+                          <td style={S.td}><span style={{ ...S.badge, background: u.isActive ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: u.isActive ? "#86efac" : "#fca5a5" }}>{u.isActive ? "Active" : "Inactive"}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+
+                {w.type === "quick_actions" && (
+                  <QuickActionsWidget setActive={setActive} token={token} />
+                )}
+
+                {w.type === "analytics" && (
+                  <AnalyticsWidget />
+                )}
+
+                {w.type === "notes" && (
+                  <NotesWidget />
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
+}
+
+// ─── Custom Canvas Widget Sub-Components ──────────────────────────────────────
+function NotesWidget() {
+  const [content, setContent] = useState(() => localStorage.getItem("admin_scratchpad_notes") || "");
+  const handleChange = (e) => {
+    setContent(e.target.value);
+    localStorage.setItem("admin_scratchpad_notes", e.target.value);
+  };
+  return (
+    <textarea
+      value={content}
+      onChange={handleChange}
+      placeholder="Type quick reminders, tasks, or admin notes here... (Automatically saved)"
+      style={{
+        width: "100%",
+        height: 180,
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        borderRadius: 12,
+        padding: 12,
+        color: "#fff",
+        fontSize: 13,
+        fontFamily: "inherit",
+        outline: "none",
+        resize: "none",
+        lineHeight: 1.5
+      }}
+    />
+  );
+}
+
+function AnalyticsWidget() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+        Course Registration completion status across branches:
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {[
+          { branch: "Computer Science & Engineering (CSE)", progress: 85, color: "#6366f1" },
+          { branch: "Electronics & Communication (ECE)", progress: 62, color: "#22c55e" },
+          { branch: "Mechanical Engineering (ME)", progress: 45, color: "#f59e0b" },
+          { branch: "Civil Engineering", progress: 28, color: "#ef4444" }
+        ].map(b => (
+          <div key={b.branch} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+              <span style={{ fontWeight: 500 }}>{b.branch}</span>
+              <span style={{ color: b.color, fontWeight: 700 }}>{b.progress}% Complete</span>
+            </div>
+            <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${b.progress}%`, background: b.color, borderRadius: 3 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function QuickActionsWidget({ setActive, token }) {
+  const [seeding, setSeeding] = useState(false);
+  const [seedMsg, setSeedMsg] = useState("");
+
+  const triggerSeed = async () => {
+    setSeeding(true);
+    setSeedMsg("");
+    try {
+      const res = await API.post("/auth/seed-demo", {}, h(token));
+      setSeedMsg(res.data?.message || "Database seeded!");
+      setTimeout(() => window.location.reload(), 1500);
+    } catch {
+      setSeedMsg("Seeding failed.");
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <button 
+          onClick={() => setActive("students")} 
+          style={{
+            padding: "12px",
+            background: "rgba(99,102,241,0.08)",
+            border: "1px solid rgba(99,102,241,0.15)",
+            borderRadius: 10,
+            color: "#a5b4fc",
+            fontFamily: "inherit",
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: "pointer",
+            textAlign: "left",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4
+          }}
+        >
+          <span>🎓 Students</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>Manage & toggle status</span>
+        </button>
+
+        <button 
+          onClick={() => setActive("faculty")} 
+          style={{
+            padding: "12px",
+            background: "rgba(34,197,94,0.08)",
+            border: "1px solid rgba(34,197,94,0.15)",
+            borderRadius: 10,
+            color: "#86efac",
+            fontFamily: "inherit",
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: "pointer",
+            textAlign: "left",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4
+          }}
+        >
+          <span>👨‍🏫 Faculty</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>Appoint & edit details</span>
+        </button>
+
+        <button 
+          onClick={() => setActive("notices")} 
+          style={{
+            padding: "12px",
+            background: "rgba(139,92,246,0.08)",
+            border: "1px solid rgba(139,92,246,0.15)",
+            borderRadius: 10,
+            color: "#c084fc",
+            fontFamily: "inherit",
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: "pointer",
+            textAlign: "left",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4
+          }}
+        >
+          <span>📢 Create Notice</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>Publish general alerts</span>
+        </button>
+
+        <button 
+          onClick={() => setActive("timetable")} 
+          style={{
+            padding: "12px",
+            background: "rgba(245,158,11,0.08)",
+            border: "1px solid rgba(245,158,11,0.15)",
+            borderRadius: 10,
+            color: "#fcd34d",
+            fontFamily: "inherit",
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: "pointer",
+            textAlign: "left",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4
+          }}
+        >
+          <span>📅 Timetable</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>Configure class hours</span>
+        </button>
+      </div>
+
+      <button 
+        type="button" 
+        onClick={triggerSeed} 
+        disabled={seeding}
+        style={{
+          marginTop: 6,
+          padding: "12px",
+          background: "linear-gradient(135deg, rgba(239,68,68,0.15), rgba(245,158,11,0.15))",
+          border: "1px solid rgba(239,68,68,0.3)",
+          borderRadius: 10,
+          color: "#fca5a5",
+          fontFamily: "inherit",
+          fontWeight: 700,
+          fontSize: 12,
+          cursor: seeding ? "not-allowed" : "pointer"
+        }}
+      >
+        {seeding ? "Resetting database..." : "⚡ Reset & Seed Demo Data"}
+      </button>
+
+      {seedMsg && <div style={{ fontSize: 11, textAlign: "center", color: "#86efac", fontWeight: 500 }}>{seedMsg}</div>}
+    </div>
+  );
+}
 }
 
 // ─── Users (Students or Faculty) ─────────────────────────────────────────────
@@ -1486,4 +1881,16 @@ const S = {
   select:      { width: "100%", background: "#1a1b35", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "#fff", fontFamily: "inherit", fontSize: 14, outline: "none", cursor: "pointer" },
   primaryBtn:  { padding: "10px 20px", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", borderRadius: 10, color: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" },
   secondaryBtn:{ padding: "10px 20px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "rgba(255,255,255,0.6)", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  canvasMinBtn: {
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 6,
+    color: "rgba(255,255,255,0.6)",
+    cursor: "pointer",
+    fontSize: 10,
+    padding: "3px 8px",
+    fontFamily: "'DM Sans',sans-serif",
+    fontWeight: 500,
+    transition: "all 0.15s"
+  }
 };
