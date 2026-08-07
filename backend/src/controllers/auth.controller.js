@@ -141,6 +141,7 @@ exports.updateProfile = async (req, res) => {
       rollNumber,
       department,
       designation,
+      employeeCode,
     } = req.body;
 
     const updates = {};
@@ -150,9 +151,10 @@ exports.updateProfile = async (req, res) => {
     if (branch) updates.branch = branch;
     if (section) updates.section = section;
     if (school) updates.school = school;
-    if (rollNumber) updates.rollNumber = rollNumber;
+    if (rollNumber !== undefined) updates.rollNumber = rollNumber;
     if (department) updates.department = department;
     if (designation) updates.designation = designation;
+    if (employeeCode !== undefined) updates.employeeCode = employeeCode;
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
@@ -190,13 +192,14 @@ exports.getUsers = async (req, res) => {
 
 exports.createStaffUser = async (req, res) => {
   try {
-    const { name, email, password, role, department, designation } = req.body;
+    const { name, email, password, role, department, designation, employeeCode } = req.body;
 
     const safeName = String(name || "").trim();
     const safeEmail = String(email || "").trim().toLowerCase();
     const safeRole = String(role || "").trim();
     const safeDepartment = String(department || "").trim();
     const safeDesignation = String(designation || "").trim();
+    const safeEmployeeCode = String(employeeCode || "").trim();
 
     if (!safeName || !safeEmail || !password || !safeRole) {
       return res.status(400).json({ message: "name, email, password and role are required" });
@@ -223,6 +226,7 @@ exports.createStaffUser = async (req, res) => {
       role: safeRole,
       department: safeRole === "faculty" ? safeDepartment : null,
       designation: safeRole === "faculty" ? safeDesignation || null : null,
+      employeeCode: safeEmployeeCode || null
     };
 
     const user = await User.create(userData);
@@ -236,6 +240,7 @@ exports.createStaffUser = async (req, res) => {
         role: user.role,
         department: user.department,
         designation: user.designation,
+        employeeCode: user.employeeCode,
         isActive: user.isActive,
       },
     });

@@ -130,7 +130,8 @@ const seedDatabase = async () => {
         password: facultyPasswordHash,
         role: "faculty",
         department: f.department,
-        designation: f.designation
+        designation: f.designation,
+        employeeCode: `EMP${String(faculties.length + 1).padStart(3, "0")}`
       });
       faculties.push(created);
     }

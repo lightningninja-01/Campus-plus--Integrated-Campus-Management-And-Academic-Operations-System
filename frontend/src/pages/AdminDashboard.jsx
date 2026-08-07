@@ -640,7 +640,7 @@ function UsersView({ role, token }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  {["Name", "Email", isStudent ? "Roll No" : "Designation", isStudent ? "Branch / Sem" : "Department", "Status", "Action"].map(h => <th key={h} style={S.th}>{h}</th>)}
+                  {["Name", "Email", isStudent ? "Roll No" : "Emp Code / Desig", isStudent ? "Branch / Sem" : "Department", "Status", "Action"].map(h => <th key={h} style={S.th}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -648,7 +648,7 @@ function UsersView({ role, token }) {
                   <tr key={u._id}>
                     <td style={{ ...S.td, fontWeight: 600, color: "#e2e8f0" }}>{u.name}</td>
                     <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{u.email}</td>
-                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{isStudent ? (u.rollNumber || "—") : (u.designation || "—")}</td>
+                    <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{isStudent ? (u.rollNumber || "—") : `${u.employeeCode || "—"} / ${u.designation || "—"}`}</td>
                     <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{isStudent ? `${u.branch || "—"} / Sem ${u.semester || "—"}` : (u.department || "—")}</td>
                     <td style={S.td}><span style={{ ...S.badge, background: u.isActive ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: u.isActive ? "#86efac" : "#fca5a5" }}>{u.isActive ? "Active" : "Inactive"}</span></td>
                     <td style={S.td}>
@@ -682,6 +682,7 @@ function StaffAccessView({ token }) {
     role: "faculty",
     department: "",
     designation: "",
+    employeeCode: "",
   });
 
   const load = useCallback(() => {
@@ -707,6 +708,7 @@ function StaffAccessView({ token }) {
       role: "faculty",
       department: "",
       designation: "",
+      employeeCode: "",
     });
   };
 
@@ -733,6 +735,7 @@ function StaffAccessView({ token }) {
         email: form.email,
         password: form.password,
         role: form.role,
+        employeeCode: form.employeeCode,
       });
       resetForm();
       load();
@@ -808,10 +811,14 @@ function StaffAccessView({ token }) {
             <input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} placeholder="Create a temporary password" style={S.input} />
           </div>
           <div>
+            <label style={S.label}>Employee Code</label>
+            <input value={form.employeeCode} onChange={(e) => setForm((p) => ({ ...p, employeeCode: e.target.value }))} placeholder="e.g. EMP081" style={S.input} />
+          </div>
+          <div>
             <label style={S.label}>Department {form.role === "faculty" ? "*" : ""}</label>
             <input value={form.department} onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))} placeholder="e.g. CSE" style={S.input} />
           </div>
-          <div>
+          <div style={{ gridColumn: "1/-1" }}>
             <label style={S.label}>Designation</label>
             <input value={form.designation} onChange={(e) => setForm((p) => ({ ...p, designation: e.target.value }))} placeholder="e.g. Assistant Professor" style={S.input} />
           </div>
@@ -847,6 +854,12 @@ function StaffAccessView({ token }) {
               <label style={S.label}>Full Name</label>
               <div style={S.input}>{lastCreatedCredentials.name}</div>
             </div>
+            {lastCreatedCredentials.employeeCode && (
+              <div>
+                <label style={S.label}>Employee Code</label>
+                <div style={S.input}>{lastCreatedCredentials.employeeCode}</div>
+              </div>
+            )}
             <div>
               <label style={S.label}>Email / Login ID</label>
               <div style={S.input}>{lastCreatedCredentials.email}</div>
@@ -885,7 +898,7 @@ function StaffAccessView({ token }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Name", "Email", "Role", "Department", "Designation", "Status", "Action"].map((head) => <th key={head} style={S.th}>{head}</th>)}
+                {["Name", "Email", "Role", "Emp Code", "Department", "Designation", "Status", "Action"].map((head) => <th key={head} style={S.th}>{head}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -898,6 +911,7 @@ function StaffAccessView({ token }) {
                       {user.role}
                     </span>
                   </td>
+                  <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{user.employeeCode || "—"}</td>
                   <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{user.department || "—"}</td>
                   <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{user.designation || "—"}</td>
                   <td style={S.td}>

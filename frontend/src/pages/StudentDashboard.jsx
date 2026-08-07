@@ -1022,7 +1022,7 @@ function ProfileView({ user, token }) {
         </div>
         <div>
           <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#e2e8f0" }}>{user?.name}</p>
-          <p style={{ margin: "3px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{user?.email}</p>
+          <p style={{ margin: "3px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{user?.email} {user?.rollNumber && `• Roll No: ${user.rollNumber}`}</p>
           <span style={{ ...S.badge, background: "rgba(99,102,241,0.15)", color: "#a5b4fc", marginTop: 6, display: "inline-block", textTransform: "capitalize" }}>{user?.role}</span>
         </div>
       </div>

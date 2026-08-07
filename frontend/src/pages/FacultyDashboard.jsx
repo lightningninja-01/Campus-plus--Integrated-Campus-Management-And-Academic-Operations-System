@@ -785,7 +785,7 @@ function StudentsView({ token }) {
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 function ProfileView({ user, token }) {
-  const [form, setForm]   = useState({ name: user?.name || "", email: user?.email || "", department: user?.department || "", designation: user?.designation || "" });
+  const [form, setForm]   = useState({ name: user?.name || "", email: user?.email || "", department: user?.department || "", designation: user?.designation || "", employeeCode: user?.employeeCode || "" });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg]     = useState({ text: "", error: false });
 
@@ -810,7 +810,7 @@ function ProfileView({ user, token }) {
         </div>
         <div>
           <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#e2e8f0" }}>{user?.name}</p>
-          <p style={{ margin: "3px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{user?.email}</p>
+          <p style={{ margin: "3px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{user?.email} {user?.employeeCode && `• Emp Code: ${user.employeeCode}`}</p>
           <span style={{ ...S.badge, background: "rgba(99,102,241,0.15)", color: "#a5b4fc", marginTop: 6, display: "inline-block" }}>Faculty</span>
         </div>
       </div>
@@ -821,6 +821,7 @@ function ProfileView({ user, token }) {
           {[
             { label: "Full Name",    key: "name",        placeholder: "Your full name" },
             { label: "Email",        key: "email",       placeholder: "you@college.edu" },
+            { label: "Employee Code",key: "employeeCode",placeholder: "e.g. EMP001" },
             { label: "Department",   key: "department",  placeholder: "e.g. CSE" },
             { label: "Designation",  key: "designation", placeholder: "e.g. Assistant Professor" },
           ].map(f => (

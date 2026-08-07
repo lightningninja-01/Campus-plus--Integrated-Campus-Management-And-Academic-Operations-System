@@ -71,6 +71,11 @@ const userSchema = new mongoose.Schema(
       default: null, // e.g. "Professor", "Assistant Professor"
     },
 
+    employeeCode: {
+      type: String,
+      default: null,
+    },
+
     // ============================
     // COMMON FIELDS
     // ============================
