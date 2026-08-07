@@ -176,7 +176,7 @@ const seedDatabase = async () => {
       // ── CSE Semester 3 ──
       { name: "Data Structures", code: "CS301", credits: 4, semester: 3, branch: "CSE", department: "CSE", slot: "A2", capacity: 60, category: "core", faculty: fKnuth._id, description: "Linked Lists, Stack and Queue implementations, Tree traversals, and Sorting." },
       { name: "Discrete Mathematics", code: "CS201", credits: 4, semester: 3, branch: "CSE", department: "CSE", slot: "B1", capacity: 60, category: "core", faculty: fJohnson._id, description: "Combinatorics, graph theory modeling, relations, logic functions, and proofs." },
-      { name: "Computer Organization", code: "CS302", credits: 3, semester: 3, branch: "CSE", department: "CSE", slot: "C1", capacity: 60, category: "core", faculty: fNeumann._id, description: "CPU architecture, memory hierarchies, cache maps, instruction pipelining, and bus links." },
+      { name: "Computer Organization", code: "CS302", credits: 3, semester: 3, branch: "CSE", department: "CSE", slot: "D1", capacity: 60, category: "core", faculty: fNeumann._id, description: "CPU architecture, memory hierarchies, cache maps, instruction pipelining, and bus links." },
       
       // ── ECE Semester 3 ──
       { name: "Network Theory", code: "EC301", credits: 3, semester: 3, branch: "ECE", department: "ECE", slot: "A2", capacity: 60, category: "core", faculty: fShannon._id, description: "Kirchhoff laws, node/mesh linear loop solving, and active filter topologies." },
