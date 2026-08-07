@@ -621,7 +621,6 @@ function TimetableGlanceWidget({ timetable }) {
     </div>
   );
 }
-}
 
 // ─── My Courses ───────────────────────────────────────────────────────────────
 function CoursesView({ token }) {
