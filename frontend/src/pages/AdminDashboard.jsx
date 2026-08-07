@@ -18,6 +18,7 @@ const NAV = [
   { key: "notices",    label: "Notices",         icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
   { key: "results",    label: "Upload Results",  icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
   { key: "reports",    label: "Reports",         icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
+  { key: "profile",    label: "Profile",         icon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
 ];
 
 const h = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
@@ -94,8 +95,14 @@ export default function AdminDashboard() {
             >
               ⚡ Seed Demo Data
             </button>
-            <div style={S.avatar}>{firstName[0]?.toUpperCase()}</div>
-            <div>
+            <button
+              type="button"
+              onClick={() => setActive("profile")}
+              style={{ ...S.avatar, cursor: "pointer", border: active === "profile" ? "2px solid #6366f1" : "2px solid transparent" }}
+            >
+              {firstName[0]?.toUpperCase()}
+            </button>
+            <div onClick={() => setActive("profile")} style={{ cursor: "pointer" }}>
               <p style={{ margin: 0, fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>{firstName}</p>
               <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Administrator</p>
             </div>
@@ -113,6 +120,7 @@ export default function AdminDashboard() {
           {active === "notices"   && <NoticesView token={token} />}
           {active === "results"   && <ResultsView token={token} />}
           {active === "reports"   && <ReportsView token={token} />}
+          {active === "profile"   && <ProfileView user={user} token={token} />}
         </div>
       </div>
     </div>
@@ -2097,6 +2105,64 @@ function RegistrationWindowsView({ token }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+function ProfileView({ user, token }) {
+  const [form, setForm]   = useState({ name: user?.name || "", email: user?.email || "" });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]     = useState({ text: "", error: false });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await API.put("/auth/profile", form, h(token));
+      setMsg({ text: "Profile updated successfully!", error: false });
+    } catch (e) {
+      setMsg({ text: e.response?.data?.message || "Failed to update.", error: true });
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 560 }}>
+      <PageHeader title="My Profile" sub="View and update your administrator details" />
+
+      <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 800, color: "#fff" }}>
+          {user?.name?.[0]?.toUpperCase()}
+        </div>
+        <div>
+          <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#e2e8f0" }}>{user?.name}</p>
+          <p style={{ margin: "3px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{user?.email}</p>
+          <span style={{ ...S.badge, background: "rgba(139,92,246,0.15)", color: "#c084fc", marginTop: 6, display: "inline-block" }}>Administrator</span>
+        </div>
+      </div>
+
+      <div style={S.card}>
+        <div style={S.cardHead}><span style={S.cardTitle}>Edit Information</span></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {[
+            { label: "Full Name", key: "name", placeholder: "Your full name" },
+            { label: "Email Address", key: "email", placeholder: "admin@campus.edu" },
+          ].map(f => (
+            <div key={f.key}>
+              <label style={S.label}>{f.label}</label>
+              <input value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} style={S.input} />
+            </div>
+          ))}
+        </div>
+        {msg.text && (
+          <div style={{ marginTop: 16, padding: "10px 14px", background: msg.error ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)", border: `1px solid ${msg.error ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.3)"}`, borderRadius: 10, color: msg.error ? "#fca5a5" : "#86efac", fontSize: 13 }}>
+            {msg.text}
+          </div>
+        )}
+        <button type="button" onClick={handleSave} disabled={saving} style={{ ...S.primaryBtn, marginTop: 20, width: "100%" }}>
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
     </div>
   );
 }
