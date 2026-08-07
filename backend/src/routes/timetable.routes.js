@@ -204,7 +204,113 @@ const generateEntries = (courseRequests, settings) => {
 
   const solved = solve(0);
   if (!solved) {
-    throw new Error("Unable to place all courses in a conflict-free timeline. Try adding more classrooms or expanding periods per day.");
+    warnings.push("Notice: Strict schedule generation was impossible. The system has relaxed constraints to generate a layout, minimizing clashes where possible.");
+    
+    // Clear all strict allocations so we start fresh for the relaxed heuristic pass
+    for (const key of Object.keys(assignments)) {
+      delete assignments[key];
+    }
+    facultyBusyPeriods.clear();
+    for (const key of Object.keys(groupBusySlots)) {
+      delete groupBusySlots[key];
+    }
+    roomBusyPeriods.clear();
+
+    const slotKeys = Object.keys(SLOT_MAP);
+
+    for (const req of unassigned) {
+      let bestSlot = null;
+      let bestRoom = null;
+      let bestScore = Infinity;
+      let bestWarnings = [];
+
+      for (const slotKey of slotKeys) {
+        const sessions = SLOT_MAP[slotKey];
+        const facultyId = String(req.course.faculty._id || req.course.faculty);
+        const groupKey = `${req.course.branch}_${req.course.semester}`;
+        
+        let score = 0;
+        let slotWarnings = [];
+
+        // 1. Check Faculty busy
+        for (const session of sessions) {
+          const fKey = `${facultyId}_${session.day}_${session.period}`;
+          if (facultyBusyPeriods.has(fKey)) {
+            score += 10;
+            slotWarnings.push(`Faculty conflict: ${req.course.faculty.name} is scheduled to teach multiple courses concurrently during slot ${slotKey}.`);
+            break;
+          }
+        }
+
+        // 2. Check Group busy
+        for (const session of sessions) {
+          const gKey = `${groupKey}_${session.day}_${session.period}`;
+          const scheduled = groupBusySlots[gKey] || [];
+          if ((req.course.category || "core") === "core" && scheduled.length > 0) {
+            score += 10;
+            slotWarnings.push(`Group conflict: ${req.course.branch} Sem ${req.course.semester} students have overlapping core classes in slot ${slotKey}.`);
+            break;
+          }
+          if (scheduled.some(c => (c.category || "core") === "core")) {
+            score += 10;
+            slotWarnings.push(`Group conflict: ${req.course.branch} Sem ${req.course.semester} students have overlapping core classes in slot ${slotKey}.`);
+            break;
+          }
+          if (scheduled.some(c => (c.category || "core") !== (req.course.category || "core"))) {
+            score += 10;
+            slotWarnings.push(`Group conflict: ${req.course.branch} Sem ${req.course.semester} students have overlapping categories in slot ${slotKey}.`);
+            break;
+          }
+        }
+
+        // 3. Find Room
+        let selectedRoom = null;
+        for (const room of settings.rooms) {
+          let roomAvailable = true;
+          for (const session of sessions) {
+            if (roomBusyPeriods.has(`${room}_${session.day}_${session.period}`)) {
+              roomAvailable = false;
+              break;
+            }
+          }
+          if (roomAvailable) {
+            selectedRoom = room;
+            break;
+          }
+        }
+
+        if (!selectedRoom) {
+          score += 1;
+          selectedRoom = `Virtual Room ${settings.rooms.length + 1}`;
+          slotWarnings.push(`Classroom shortage: Allocated virtual classroom '${selectedRoom}' for ${req.course.name} (${req.course.code}) during slot ${slotKey}.`);
+        }
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestSlot = slotKey;
+          bestRoom = selectedRoom;
+          bestWarnings = slotWarnings;
+        }
+      }
+
+      // Assign the best slot found
+      assignments[req.course._id] = { slotKey: bestSlot, room: bestRoom };
+      warnings.push(...bestWarnings);
+
+      // Mark busy
+      const sessions = SLOT_MAP[bestSlot];
+      const facultyId = String(req.course.faculty._id || req.course.faculty);
+      const groupKey = `${req.course.branch}_${req.course.semester}`;
+      for (const session of sessions) {
+        facultyBusyPeriods.add(`${facultyId}_${session.day}_${session.period}`);
+        
+        const gKey = `${groupKey}_${session.day}_${session.period}`;
+        if (!groupBusySlots[gKey]) groupBusySlots[gKey] = [];
+        groupBusySlots[gKey].push(req.course);
+
+        roomBusyPeriods.add(`${bestRoom}_${session.day}_${session.period}`);
+      }
+    }
   }
 
   // Compile final entry formats
