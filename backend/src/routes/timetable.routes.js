@@ -34,85 +34,185 @@ const normalizeGeneratorSettings = (body = {}) => {
   };
 };
 
+const SLOT_MAP = {
+  "A1": [{ day: "Monday", period: 1 }, { day: "Wednesday", period: 1 }],
+  "B1": [{ day: "Monday", period: 2 }, { day: "Wednesday", period: 2 }],
+  "C1": [{ day: "Monday", period: 3 }, { day: "Wednesday", period: 3 }],
+  "D1": [{ day: "Tuesday", period: 1 }, { day: "Thursday", period: 1 }],
+  "E1": [{ day: "Tuesday", period: 2 }, { day: "Thursday", period: 2 }],
+  "F1": [{ day: "Tuesday", period: 3 }, { day: "Thursday", period: 3 }],
+  "A2": [{ day: "Monday", period: 4 }, { day: "Wednesday", period: 4 }],
+  "B2": [{ day: "Tuesday", period: 4 }, { day: "Thursday", period: 4 }],
+  "G1": [{ day: "Friday", period: 1 }, { day: "Friday", period: 2 }],
+  "H1": [{ day: "Friday", period: 3 }, { day: "Friday", period: 4 }],
+  "I1": [{ day: "Tuesday", period: 5 }, { day: "Thursday", period: 5 }],
+  "J1": [{ day: "Monday", period: 5 }, { day: "Wednesday", period: 5 }],
+  "K1": [{ day: "Friday", period: 5 }]
+};
+
 const buildCourseRequests = (courses) => (
-  courses
-    .map((course) => ({
-      course,
-      sessionsPerWeek: Math.max(1, Math.min(6, Number(course.credits) || 3)),
-      groupKey: `${course.branch}__${course.semester}`,
-    }))
-    .sort((a, b) => b.sessionsPerWeek - a.sessionsPerWeek)
+  courses.map((course) => ({
+    course,
+    groupKey: `${course.branch}__${course.semester}`,
+  }))
 );
 
 const generateEntries = (courseRequests, settings) => {
+  const assignments = {};
+  const facultyBusyPeriods = new Set();
+  const groupBusyPeriods = new Set();
+  const roomBusyPeriods = new Set();
+
+  const preAssigned = courseRequests.filter(r => r.course.slot && SLOT_MAP[r.course.slot]);
+  const unassigned = courseRequests.filter(r => !r.course.slot || !SLOT_MAP[r.course.slot]);
+
+  // Sort unassigned courses by credits descending (scheduling heavier courses first reduces backtrack rate)
+  unassigned.sort((a, b) => (b.course.credits || 3) - (a.course.credits || 3));
+
+  const checkAndPlaceSlot = (course, slotKey, testOnly = false) => {
+    const sessions = SLOT_MAP[slotKey];
+    const facultyId = String(course.faculty._id || course.faculty);
+    const groupKey = `${course.branch}_${course.semester}`;
+
+    // 1. Verify Faculty & Group conflict bounds
+    for (const session of sessions) {
+      // Skip session if it exceeds settings boundaries
+      if (session.period > settings.periodsPerDay) return null;
+      if (!settings.days.includes(session.day)) return null;
+
+      const fKey = `${facultyId}_${session.day}_${session.period}`;
+      const gKey = `${groupKey}_${session.day}_${session.period}`;
+      if (facultyBusyPeriods.has(fKey) || groupBusyPeriods.has(gKey)) {
+        return null;
+      }
+    }
+
+    // 2. Find room available across all sessions of the slot
+    let selectedRoom = null;
+    for (const room of settings.rooms) {
+      let roomAvailable = true;
+      for (const session of sessions) {
+        if (roomBusyPeriods.has(`${room}_${session.day}_${session.period}`)) {
+          roomAvailable = false;
+          break;
+        }
+      }
+      if (roomAvailable) {
+        selectedRoom = room;
+        break;
+      }
+    }
+
+    if (!selectedRoom) return null;
+
+    if (!testOnly) {
+      for (const session of sessions) {
+        facultyBusyPeriods.add(`${facultyId}_${session.day}_${session.period}`);
+        groupBusyPeriods.add(`${groupKey}_${session.day}_${session.period}`);
+        roomBusyPeriods.add(`${selectedRoom}_${session.day}_${session.period}`);
+      }
+    }
+
+    return selectedRoom;
+  };
+
+  const removeSlotAllocation = (course, slotKey, room) => {
+    const sessions = SLOT_MAP[slotKey];
+    const facultyId = String(course.faculty._id || course.faculty);
+    const groupKey = `${course.branch}_${course.semester}`;
+    for (const session of sessions) {
+      facultyBusyPeriods.delete(`${facultyId}_${session.day}_${session.period}`);
+      groupBusyPeriods.delete(`${groupKey}_${session.day}_${session.period}`);
+      roomBusyPeriods.delete(`${room}_${session.day}_${session.period}`);
+    }
+  };
+
+  // Place pre-assigned slots
+  for (const req of preAssigned) {
+    const room = checkAndPlaceSlot(req.course, req.course.slot, false);
+    if (!room) {
+      throw new Error(`Conflict placing pre-assigned slot "${req.course.slot}" for course ${req.course.name} (${req.course.code}). Check room bounds or change its slot.`);
+    }
+    assignments[req.course._id] = { slotKey: req.course.slot, room };
+  }
+
+  // Backtracking CSP Solver
+  const solve = (index) => {
+    if (index >= unassigned.length) return true;
+
+    const req = unassigned[index];
+    const slotKeys = Object.keys(SLOT_MAP);
+
+    for (const slotKey of slotKeys) {
+      const room = checkAndPlaceSlot(req.course, slotKey, false);
+      if (room) {
+        assignments[req.course._id] = { slotKey, room };
+
+        if (solve(index + 1)) return true;
+
+        // Backtrack
+        removeSlotAllocation(req.course, slotKey, room);
+        delete assignments[req.course._id];
+      }
+    }
+
+    return false;
+  };
+
+  const solved = solve(0);
+  if (!solved) {
+    throw new Error("Unable to place all courses in a conflict-free timeline. Try adding more classrooms or expanding periods per day.");
+  }
+
+  // Compile final entry formats
   const entries = [];
-  const facultyBusy = new Set();
-  const roomBusy = new Set();
-  const groupBusy = new Set();
-
   const slotBaseMinutes = settings.startHour * 60 + settings.startMinute;
-  const slots = [];
+  const periodTimes = {};
 
-  settings.days.forEach((day) => {
-    for (let period = 1; period <= settings.periodsPerDay; period += 1) {
-      const start = slotBaseMinutes + ((period - 1) * settings.slotMinutes);
-      slots.push({
-        day,
-        period,
-        startTime: toTimeString(start),
-        endTime: toTimeString(start + settings.slotMinutes),
-      });
-    }
-  });
+  for (let p = 1; p <= settings.periodsPerDay; p++) {
+    const start = slotBaseMinutes + ((p - 1) * settings.slotMinutes);
+    periodTimes[p] = {
+      startTime: toTimeString(start),
+      endTime: toTimeString(start + settings.slotMinutes)
+    };
+  }
 
-  for (const request of courseRequests) {
-    let placedCount = 0;
-    const placedDays = new Set();
+  const allRequests = [...preAssigned, ...unassigned];
+  const courseSlotAssignments = [];
 
-    for (const slot of slots) {
-      if (placedCount >= request.sessionsPerWeek) break;
+  for (const req of allRequests) {
+    const assign = assignments[req.course._id];
+    if (!assign) continue;
 
-      const facultyKey = `${request.course.faculty}_${slot.day}_${slot.period}`;
-      const groupKey = `${request.groupKey}_${slot.day}_${slot.period}`;
+    courseSlotAssignments.push({
+      courseId: req.course._id,
+      slotKey: assign.slotKey,
+      room: assign.room
+    });
 
-      if (facultyBusy.has(facultyKey) || groupBusy.has(groupKey) || placedDays.has(slot.day)) {
-        continue;
-      }
+    const sessions = SLOT_MAP[assign.slotKey];
+    for (const session of sessions) {
+      if (session.period > settings.periodsPerDay) continue;
 
-      const room = settings.rooms.find((item) => !roomBusy.has(`${item}_${slot.day}_${slot.period}`));
-      if (!room) {
-        continue;
-      }
-
+      const times = periodTimes[session.period] || { startTime: "09:00", endTime: "10:00" };
       entries.push({
-        ...slot,
-        room,
-        branch: request.course.branch,
-        semester: request.course.semester,
+        day: session.day,
+        period: session.period,
+        startTime: times.startTime,
+        endTime: times.endTime,
+        room: assign.room,
+        branch: req.course.branch,
+        semester: req.course.semester,
         section: null,
-        course: request.course._id,
-        faculty: request.course.faculty,
-        courseName: request.course.name,
-        courseCode: request.course.code,
+        course: req.course._id,
+        faculty: req.course.faculty._id || req.course.faculty,
+        courseName: req.course.name,
+        courseCode: req.course.code
       });
-
-      facultyBusy.add(facultyKey);
-      groupBusy.add(groupKey);
-      roomBusy.add(`${room}_${slot.day}_${slot.period}`);
-      placedDays.add(slot.day);
-      placedCount += 1;
-    }
-
-    if (placedCount < request.sessionsPerWeek) {
-      throw new Error(`Unable to place all sessions for ${request.course.name}. Try more rooms or periods.`);
     }
   }
 
-  return entries.sort((a, b) => {
-    const dayDiff = settings.days.indexOf(a.day) - settings.days.indexOf(b.day);
-    if (dayDiff !== 0) return dayDiff;
-    return a.period - b.period;
-  });
+  return { entries, courseSlotAssignments };
 };
 
 router.get("/all", authMiddleware, roleMiddleware("admin"), async (req, res) => {
@@ -235,7 +335,14 @@ router.post("/generate", authMiddleware, roleMiddleware("admin"), async (req, re
     }
 
     const requests = buildCourseRequests(courses);
-    const entries = generateEntries(requests, settings);
+    const { entries, courseSlotAssignments } = generateEntries(requests, settings);
+
+    // Save assigned slots back to Course model so registration slots stay in sync!
+    for (const assign of courseSlotAssignments) {
+      await Course.findByIdAndUpdate(assign.courseId, { 
+        slot: assign.slotKey 
+      });
+    }
 
     await Timetable.updateMany({ isActive: true }, { $set: { isActive: false } });
 
