@@ -52,6 +52,24 @@ export default function StudentDashboard() {
   const { user, token, logout } = useAuth();
   const [active, setActive] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [regStatus, setRegStatus] = useState(null);
+
+  const fetchRegStatus = useCallback(async () => {
+    try {
+      const data = await courseAPI.getRegistrationStatus(token);
+      setRegStatus(data);
+      if (data && data.isOpen && data.currentCredits < data.minCredits) {
+        setActive("registration");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchRegStatus();
+  }, [fetchRegStatus]);
+
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return "Good Morning";
@@ -71,17 +89,28 @@ export default function StudentDashboard() {
         <nav style={S.nav}>
           {NAV.map(({ key, label, icon }) => {
             const on = active === key;
+            const isLocked = regStatus && regStatus.isOpen && regStatus.currentCredits < regStatus.minCredits && key !== "registration";
+
             return (
               <button
                 key={key}
                 type="button"
-                onClick={() => setActive(key)}
+                onClick={() => {
+                  if (isLocked) {
+                    alert(`Course Registration is open! You must register for at least ${regStatus.minCredits} credits (currently ${regStatus.currentCredits} Cr) before you can access other sections.`);
+                    return;
+                  }
+                  setActive(key);
+                }}
+                disabled={isLocked}
                 style={{
                   ...S.navBtn,
                   background: on ? "rgba(99,102,241,0.18)" : "transparent",
-                  color: on ? "#a5b4fc" : "rgba(255,255,255,0.55)",
+                  color: isLocked ? "rgba(255,255,255,0.15)" : on ? "#a5b4fc" : "rgba(255,255,255,0.55)",
                   borderLeft: on ? "2px solid #6366f1" : "2px solid transparent",
                   justifyContent: sidebarOpen ? "flex-start" : "center",
+                  cursor: isLocked ? "not-allowed" : "pointer",
+                  opacity: isLocked ? 0.35 : 1,
                 }}
               >
                 <span style={{ flexShrink: 0, display: "flex" }}>{icon()}</span>
@@ -131,7 +160,7 @@ export default function StudentDashboard() {
         <div style={S.content}>
           {active === "dashboard"   && <DashView greeting={greeting} firstName={firstName} user={user} token={token} setActive={setActive} />}
           {active === "courses"     && <CoursesView token={token} />}
-          {active === "registration" && <RegistrationView token={token} />}
+          {active === "registration" && <RegistrationView token={token} onEnrollChange={fetchRegStatus} />}
           {active === "timetable"   && <TimetableView token={token} user={user} />}
           {active === "assignments" && <AssignmentsView token={token} />}
           {active === "attendance"  && <AttendanceView token={token} />}
@@ -826,7 +855,7 @@ function Empty({ message, action }) {
   );
 }
 
-function RegistrationView({ token }) {
+function RegistrationView({ token, onEnrollChange }) {
   const [status, setStatus] = useState(null);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -862,6 +891,9 @@ function RegistrationView({ token }) {
       setMsg(res.message || "Action completed!");
       setMsgType("success");
       await load();
+      if (typeof onEnrollChange === "function") {
+        await onEnrollChange();
+      }
     } catch (err) {
       const errMsg = err.response?.data?.message || "Something went wrong.";
       setMsg(errMsg);
