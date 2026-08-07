@@ -816,6 +816,7 @@ function CoursesView({ token }) {
               <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} style={S.select}>
                 <option value="core">Core Course</option>
                 <option value="elective">Elective Choice</option>
+                <option value="vac">Value Added Course (VAC)</option>
               </select>
             </div>
             <div>
@@ -853,7 +854,12 @@ function CoursesView({ token }) {
                     <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{c.branch}</td>
                     <td style={{ ...S.td, color: "#a5b4fc", fontSize: 12, fontWeight: 600 }}>{c.slot || "—"}</td>
                     <td style={{ ...S.td, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
-                      <span style={{ ...S.badge, padding: "2px 6px", background: c.category === "elective" ? "rgba(245,158,11,0.12)" : "rgba(34,197,94,0.12)", color: c.category === "elective" ? "#fcd34d" : "#86efac" }}>
+                      <span style={{ 
+                        ...S.badge, 
+                        padding: "2px 6px", 
+                        background: c.category === "elective" ? "rgba(245,158,11,0.12)" : c.category === "vac" ? "rgba(139,92,246,0.12)" : "rgba(34,197,94,0.12)", 
+                        color: c.category === "elective" ? "#fcd34d" : c.category === "vac" ? "#c084fc" : "#86efac" 
+                      }}>
                         {c.category || "core"}
                       </span>
                     </td>
