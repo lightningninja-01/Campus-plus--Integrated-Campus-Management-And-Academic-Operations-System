@@ -184,7 +184,7 @@ const seedDatabase = async () => {
       // ── CSE Semester 5 ──
       { name: "Operating Systems", code: "CS401", credits: 4, semester: 5, branch: "CSE", department: "CSE", slot: "D1", capacity: 60, category: "core", faculty: fRitchie._id, description: "Process scheduling, thread race conditions, semaphore locks, and virtual memory." },
       { name: "Database Management Systems", code: "CS402", credits: 4, semester: 5, branch: "CSE", department: "CSE", slot: "B2", capacity: 60, category: "core", faculty: fLiskov._id, description: "SQL database queries, schema normalization rules, indexes, and ACID transactions." },
-      { name: "Theory of Computation", code: "CS501", credits: 3, semester: 5, branch: "CSE", department: "CSE", slot: "A1", capacity: 60, category: "core", faculty: fTuring._id, description: "DFAs, context-free grammars, Turing machines, decidability, and Complexity classes." },
+      { name: "Theory of Computation", code: "CS501", credits: 3, semester: 5, branch: "CSE", department: "CSE", slot: "C1", capacity: 60, category: "core", faculty: fTuring._id, description: "DFAs, context-free grammars, Turing machines, decidability, and Complexity classes." },
       { name: "Software Engineering", code: "CS502", credits: 3, semester: 5, branch: "CSE", department: "CSE", slot: "C2", capacity: 60, category: "core", faculty: fHamilton._id, description: "Waterfall and Agile design models, design patterns, testing strategies, and Git." }
     ];
 

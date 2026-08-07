@@ -47,7 +47,16 @@ const SLOT_MAP = {
   "H1": [{ day: "Friday", period: 3 }, { day: "Friday", period: 4 }],
   "I1": [{ day: "Tuesday", period: 5 }, { day: "Thursday", period: 5 }],
   "J1": [{ day: "Monday", period: 5 }, { day: "Wednesday", period: 5 }],
-  "K1": [{ day: "Friday", period: 5 }]
+  "K1": [{ day: "Friday", period: 5 }],
+  "C2": [{ day: "Monday", period: 4 }, { day: "Wednesday", period: 4 }],
+  "D2": [{ day: "Tuesday", period: 4 }, { day: "Thursday", period: 4 }],
+  "E2": [{ day: "Monday", period: 5 }, { day: "Wednesday", period: 5 }],
+  "F2": [{ day: "Tuesday", period: 5 }, { day: "Thursday", period: 5 }],
+  "G2": [{ day: "Friday", period: 3 }, { day: "Friday", period: 4 }],
+  "H2": [{ day: "Friday", period: 5 }, { day: "Friday", period: 6 }],
+  "I2": [{ day: "Tuesday", period: 6 }, { day: "Thursday", period: 6 }],
+  "J2": [{ day: "Monday", period: 6 }, { day: "Wednesday", period: 6 }],
+  "K2": [{ day: "Friday", period: 7 }]
 };
 
 const buildCourseRequests = (courses) => (
