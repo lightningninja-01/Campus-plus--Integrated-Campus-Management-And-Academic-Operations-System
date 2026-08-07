@@ -6,6 +6,149 @@ const authMiddleware = require("../middleware/auth.middleware");
 const roleMiddleware = require("../middleware/role.middleware");
 
 
+// ── REGISTRATION WINDOW CRUD & STATUS ENDPOINTS ──────────────────────────────
+
+// GET registration status for current student
+router.get("/registration/status", authMiddleware, roleMiddleware("student"), async (req, res) => {
+  try {
+    const Course = require("../models/Course");
+    const User = require("../models/User");
+    const RegistrationWindow = require("../models/RegistrationWindow");
+
+    const student = await User.findById(req.user.id);
+    if (!student) return res.status(404).json({ message: "Student profile not found" });
+
+    const now = new Date();
+    const activeWindow = await RegistrationWindow.findOne({
+      semester: student.semester,
+      $or: [{ branch: "all" }, { branch: student.branch }],
+      isActive: true,
+      startDate: { $lte: now },
+      endDate: { $gte: now }
+    });
+
+    const enrolledCourses = await Course.find({ enrolledStudents: req.user.id });
+    const currentCredits = enrolledCourses.reduce((sum, c) => sum + (c.credits || 3), 0);
+
+    res.json({
+      isOpen: !!activeWindow,
+      window: activeWindow || null,
+      currentCredits,
+      minCredits: activeWindow ? activeWindow.minCredits : 12,
+      maxCredits: activeWindow ? activeWindow.maxCredits : 24,
+      studentSemester: student.semester,
+      studentBranch: student.branch,
+      enrolledCourses: enrolledCourses.map(c => ({
+        _id: c._id,
+        name: c.name,
+        code: c.code,
+        credits: c.credits,
+        slot: c.slot,
+        category: c.category
+      }))
+    });
+  } catch (err) {
+    console.error("GET /courses/registration/status error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET all registration windows (Admin view)
+router.get("/registration/windows", authMiddleware, async (req, res) => {
+  try {
+    const RegistrationWindow = require("../models/RegistrationWindow");
+    
+    if (req.user.role === "admin") {
+      const windows = await RegistrationWindow.find().sort({ semester: 1, startDate: -1 });
+      return res.json(windows);
+    } else {
+      const User = require("../models/User");
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: "Profile not found" });
+
+      const now = new Date();
+      const activeWindow = await RegistrationWindow.findOne({
+        semester: user.semester || 0,
+        $or: [{ branch: "all" }, { branch: user.branch || "none" }],
+        isActive: true,
+        startDate: { $lte: now },
+        endDate: { $gte: now }
+      });
+      return res.json(activeWindow ? [activeWindow] : []);
+    }
+  } catch (err) {
+    console.error("GET /courses/registration/windows error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// CREATE registration window (Admin only)
+router.post("/registration/windows", authMiddleware, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const RegistrationWindow = require("../models/RegistrationWindow");
+    const { semester, branch, startDate, endDate, minCredits, maxCredits, isActive } = req.body;
+
+    if (!semester || !startDate || !endDate) {
+      return res.status(400).json({ message: "semester, startDate, and endDate are required" });
+    }
+
+    const window = await RegistrationWindow.create({
+      semester: Number(semester),
+      branch: branch || "all",
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      minCredits: Number(minCredits) || 12,
+      maxCredits: Number(maxCredits) || 24,
+      isActive: isActive !== undefined ? isActive : true
+    });
+
+    res.status(201).json({ message: "Registration window created successfully", window });
+  } catch (err) {
+    console.error("POST /courses/registration/windows error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// UPDATE registration window (Admin only)
+router.put("/registration/windows/:id", authMiddleware, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const RegistrationWindow = require("../models/RegistrationWindow");
+    const { semester, branch, startDate, endDate, minCredits, maxCredits, isActive } = req.body;
+
+    const window = await RegistrationWindow.findById(req.params.id);
+    if (!window) return res.status(404).json({ message: "Registration window not found" });
+
+    if (semester !== undefined) window.semester = Number(semester);
+    if (branch !== undefined) window.branch = branch;
+    if (startDate !== undefined) window.startDate = new Date(startDate);
+    if (endDate !== undefined) window.endDate = new Date(endDate);
+    if (minCredits !== undefined) window.minCredits = Number(minCredits);
+    if (maxCredits !== undefined) window.maxCredits = Number(maxCredits);
+    if (isActive !== undefined) window.isActive = isActive;
+
+    await window.save();
+    res.json({ message: "Registration window updated successfully", window });
+  } catch (err) {
+    console.error("PUT /courses/registration/windows/:id error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// DELETE registration window (Admin only)
+router.delete("/registration/windows/:id", authMiddleware, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const RegistrationWindow = require("../models/RegistrationWindow");
+    const window = await RegistrationWindow.findByIdAndDelete(req.params.id);
+    if (!window) return res.status(404).json({ message: "Registration window not found" });
+
+    res.json({ message: "Registration window deleted successfully" });
+  } catch (err) {
+    console.error("DELETE /courses/registration/windows/:id error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 // ── GET all courses ───────────────────────────────────────────────────────────
 router.get("/", authMiddleware, async (req, res) => {
   try {
@@ -272,149 +415,6 @@ router.post("/:id/unenroll", authMiddleware, roleMiddleware("student"), async (r
     res.json({ message: "Unenrolled successfully" });
   } catch (err) {
     console.error("POST /courses/:id/unenroll error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
-// ── REGISTRATION WINDOW CRUD & STATUS ENDPOINTS ──────────────────────────────
-
-// GET registration status for current student
-router.get("/registration/status", authMiddleware, roleMiddleware("student"), async (req, res) => {
-  try {
-    const Course = require("../models/Course");
-    const User = require("../models/User");
-    const RegistrationWindow = require("../models/RegistrationWindow");
-
-    const student = await User.findById(req.user.id);
-    if (!student) return res.status(404).json({ message: "Student profile not found" });
-
-    const now = new Date();
-    const activeWindow = await RegistrationWindow.findOne({
-      semester: student.semester,
-      $or: [{ branch: "all" }, { branch: student.branch }],
-      isActive: true,
-      startDate: { $lte: now },
-      endDate: { $gte: now }
-    });
-
-    const enrolledCourses = await Course.find({ enrolledStudents: req.user.id });
-    const currentCredits = enrolledCourses.reduce((sum, c) => sum + (c.credits || 3), 0);
-
-    res.json({
-      isOpen: !!activeWindow,
-      window: activeWindow || null,
-      currentCredits,
-      minCredits: activeWindow ? activeWindow.minCredits : 12,
-      maxCredits: activeWindow ? activeWindow.maxCredits : 24,
-      studentSemester: student.semester,
-      studentBranch: student.branch,
-      enrolledCourses: enrolledCourses.map(c => ({
-        _id: c._id,
-        name: c.name,
-        code: c.code,
-        credits: c.credits,
-        slot: c.slot,
-        category: c.category
-      }))
-    });
-  } catch (err) {
-    console.error("GET /courses/registration/status error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// GET all registration windows (Admin view)
-router.get("/registration/windows", authMiddleware, async (req, res) => {
-  try {
-    const RegistrationWindow = require("../models/RegistrationWindow");
-    
-    if (req.user.role === "admin") {
-      const windows = await RegistrationWindow.find().sort({ semester: 1, startDate: -1 });
-      return res.json(windows);
-    } else {
-      const User = require("../models/User");
-      const user = await User.findById(req.user.id);
-      if (!user) return res.status(404).json({ message: "Profile not found" });
-
-      const now = new Date();
-      const activeWindow = await RegistrationWindow.findOne({
-        semester: user.semester || 0,
-        $or: [{ branch: "all" }, { branch: user.branch || "none" }],
-        isActive: true,
-        startDate: { $lte: now },
-        endDate: { $gte: now }
-      });
-      return res.json(activeWindow ? [activeWindow] : []);
-    }
-  } catch (err) {
-    console.error("GET /courses/registration/windows error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// CREATE registration window (Admin only)
-router.post("/registration/windows", authMiddleware, roleMiddleware("admin"), async (req, res) => {
-  try {
-    const RegistrationWindow = require("../models/RegistrationWindow");
-    const { semester, branch, startDate, endDate, minCredits, maxCredits, isActive } = req.body;
-
-    if (!semester || !startDate || !endDate) {
-      return res.status(400).json({ message: "semester, startDate, and endDate are required" });
-    }
-
-    const window = await RegistrationWindow.create({
-      semester: Number(semester),
-      branch: branch || "all",
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      minCredits: Number(minCredits) || 12,
-      maxCredits: Number(maxCredits) || 24,
-      isActive: isActive !== undefined ? isActive : true
-    });
-
-    res.status(201).json({ message: "Registration window created successfully", window });
-  } catch (err) {
-    console.error("POST /courses/registration/windows error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// UPDATE registration window (Admin only)
-router.put("/registration/windows/:id", authMiddleware, roleMiddleware("admin"), async (req, res) => {
-  try {
-    const RegistrationWindow = require("../models/RegistrationWindow");
-    const { semester, branch, startDate, endDate, minCredits, maxCredits, isActive } = req.body;
-
-    const window = await RegistrationWindow.findById(req.params.id);
-    if (!window) return res.status(404).json({ message: "Registration window not found" });
-
-    if (semester !== undefined) window.semester = Number(semester);
-    if (branch !== undefined) window.branch = branch;
-    if (startDate !== undefined) window.startDate = new Date(startDate);
-    if (endDate !== undefined) window.endDate = new Date(endDate);
-    if (minCredits !== undefined) window.minCredits = Number(minCredits);
-    if (maxCredits !== undefined) window.maxCredits = Number(maxCredits);
-    if (isActive !== undefined) window.isActive = isActive;
-
-    await window.save();
-    res.json({ message: "Registration window updated successfully", window });
-  } catch (err) {
-    console.error("PUT /courses/registration/windows/:id error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// DELETE registration window (Admin only)
-router.delete("/registration/windows/:id", authMiddleware, roleMiddleware("admin"), async (req, res) => {
-  try {
-    const RegistrationWindow = require("../models/RegistrationWindow");
-    const window = await RegistrationWindow.findByIdAndDelete(req.params.id);
-    if (!window) return res.status(404).json({ message: "Registration window not found" });
-
-    res.json({ message: "Registration window deleted successfully" });
-  } catch (err) {
-    console.error("DELETE /courses/registration/windows/:id error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
