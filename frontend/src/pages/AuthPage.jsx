@@ -12,7 +12,7 @@ const BRANCHES = ["CSE", "AI/ML", "Data Science", "Cyber Security", "Full Stack 
 
 export default function AuthPage({ onSuccess }) {
   const { login, register } = useAuth();
-  const [mode, setMode] = useState("login"); // "login" | "register"
+  const [mode, setMode] = useState("login"); // "login" | "register" | "forgot" | "reset"
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -31,6 +31,7 @@ export default function AuthPage({ onSuccess }) {
     rollNumber: "",
     department: "",
     designation: "",
+    resetToken: "",
   });
 
   const update = (field, value) => setForm((p) => ({ ...p, [field]: value }));
@@ -41,38 +42,64 @@ export default function AuthPage({ onSuccess }) {
     setSuccess("");
     setLoading(true);
 
-    if (mode === "login") {
-      const res = await login(form.email, form.password);
-      if (res.success) {
-        setSuccess("Login successful! Redirecting...");
-        setTimeout(() => onSuccess?.(res.role), 800);
-      } else {
-        setError(res.message || "Login failed");
+    try {
+      if (mode === "login") {
+        const res = await login(form.email, form.password);
+        if (res.success) {
+          setSuccess("Login successful! Redirecting...");
+          setTimeout(() => onSuccess?.(res.role), 800);
+        } else {
+          setError(res.message || "Login failed");
+        }
+      } else if (mode === "register") {
+        if (form.password !== form.confirmPassword) {
+          setError("Passwords do not match");
+          setLoading(false);
+          return;
+        }
+        const payload = {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          role: "student",
+          semester: Number(form.semester),
+          branch: form.branch,
+          section: form.section,
+          school: form.school,
+          rollNumber: form.rollNumber,
+        };
+        const res = await register(payload);
+        if (res.success) {
+          setSuccess("Account created! Please login.");
+          setTimeout(() => setMode("login"), 1200);
+        } else {
+          setError(res.message || "Registration failed");
+        }
+      } else if (mode === "forgot") {
+        const API = (await import("../api/api.js")).default;
+        const res = await API.post("/auth/forgot-password", { email: form.email });
+        setSuccess(`Reset token: ${res.data.token} (Simulated Email Delivery)`);
+        update("resetToken", res.data.token);
+        setTimeout(() => {
+          setMode("reset");
+          setError("");
+        }, 3000);
+      } else if (mode === "reset") {
+        if (form.password !== form.confirmPassword) {
+          setError("Passwords do not match");
+          setLoading(false);
+          return;
+        }
+        const API = (await import("../api/api.js")).default;
+        await API.post("/auth/reset-password", { token: form.resetToken, password: form.password });
+        setSuccess("Password reset successfully! Please sign in.");
+        setTimeout(() => {
+          setMode("login");
+          setError("");
+        }, 1500);
       }
-    } else {
-      if (form.password !== form.confirmPassword) {
-        setError("Passwords do not match");
-        setLoading(false);
-        return;
-      }
-      const payload = {
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        role: "student",
-        semester: Number(form.semester),
-        branch: form.branch,
-        section: form.section,
-        school: form.school,
-        rollNumber: form.rollNumber,
-      };
-      const res = await register(payload);
-      if (res.success) {
-        setSuccess("Account created! Please login.");
-        setTimeout(() => setMode("login"), 1200);
-      } else {
-        setError(res.message || "Registration failed");
-      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Something went wrong.");
     }
     setLoading(false);
   };
@@ -128,21 +155,28 @@ export default function AuthPage({ onSuccess }) {
         <div className="auth-right">
           <div className="form-card">
             {/* Tab switcher */}
-            <div className="tab-switcher">
-              <button
-                className={`tab ${mode === "login" ? "active" : ""}`}
-                onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
-              >
-                Sign In
-              </button>
-              <button
-                className={`tab ${mode === "register" ? "active" : ""}`}
-                onClick={() => { setMode("register"); setError(""); setSuccess(""); }}
-              >
-                Register
-              </button>
-              <div className={`tab-indicator ${mode === "register" ? "right" : ""}`} />
-            </div>
+            {["login", "register"].includes(mode) ? (
+              <div className="tab-switcher">
+                <button
+                  className={`tab ${mode === "login" ? "active" : ""}`}
+                  onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
+                >
+                  Sign In
+                </button>
+                <button
+                  className={`tab ${mode === "register" ? "active" : ""}`}
+                  onClick={() => { setMode("register"); setError(""); setSuccess(""); }}
+                >
+                  Register
+                </button>
+                <div className={`tab-indicator ${mode === "register" ? "right" : ""}`} />
+              </div>
+            ) : (
+              <div className="reset-header">
+                <h2>{mode === "forgot" ? "Forgot Password" : "Reset Password"}</h2>
+                <p>{mode === "forgot" ? "Enter your email to retrieve a reset token" : "Verify token and choose a new password"}</p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="auth-form">
               {mode === "register" && (
@@ -215,31 +249,48 @@ export default function AuthPage({ onSuccess }) {
                 </>
               )}
 
-              <div className="field">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  placeholder="you@college.edu"
-                  value={form.email}
-                  onChange={(e) => update("email", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="field">
-                <label>Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => update("password", e.target.value)}
-                  required
-                />
-              </div>
-
-              {mode === "register" && (
+              {mode === "reset" && (
                 <div className="field">
-                  <label>Confirm Password</label>
+                  <label>Reset Token</label>
+                  <input
+                    type="text"
+                    placeholder="Enter 6-digit token"
+                    value={form.resetToken}
+                    onChange={(e) => update("resetToken", e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+
+              {mode !== "reset" && (
+                <div className="field">
+                  <label>Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="you@college.edu"
+                    value={form.email}
+                    onChange={(e) => update("email", e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+
+              {mode !== "forgot" && (
+                <div className="field">
+                  <label>{mode === "reset" ? "New Password" : "Password"}</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={(e) => update("password", e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+
+              {["register", "reset"].includes(mode) && (
+                <div className="field">
+                  <label>{mode === "reset" ? "Confirm New Password" : "Confirm Password"}</label>
                   <input
                     type="password"
                     placeholder="••••••••"
@@ -258,14 +309,24 @@ export default function AuthPage({ onSuccess }) {
                   <span className="spinner" />
                 ) : mode === "login" ? (
                   "Sign In →"
-                ) : (
+                ) : mode === "register" ? (
                   "Create Account →"
+                ) : mode === "forgot" ? (
+                  "Send Reset Token →"
+                ) : (
+                  "Update Password →"
                 )}
               </button>
 
               {mode === "login" && (
                 <p className="forgot">
-                  <a href="#">Forgot password?</a>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setMode("forgot"); setError(""); setSuccess(""); }}>Forgot password?</a>
+                </p>
+              )}
+
+              {["forgot", "reset"].includes(mode) && (
+                <p className="forgot" style={{ marginTop: 12 }}>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setMode("login"); setError(""); setSuccess(""); }}>← Back to Sign In</a>
                 </p>
               )}
             </form>
@@ -506,6 +567,10 @@ export default function AuthPage({ onSuccess }) {
         .forgot { text-align: center; margin-top: 4px; }
         .forgot a { color: rgba(99,102,241,0.8); font-size: 13px; text-decoration: none; }
         .forgot a:hover { color: #6366f1; }
+
+        .reset-header { text-align: center; margin-bottom: 20px; }
+        .reset-header h2 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .reset-header p { font-size: 13px; color: rgba(255,255,255,0.45); }
 
         @media (max-width: 640px) {
           .auth-left { display: none; }

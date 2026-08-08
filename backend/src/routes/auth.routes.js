@@ -10,12 +10,16 @@ const {
   getUsers,
   createStaffUser,
   toggleUserActive,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/auth.controller");
 
 const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 router.get("/me", authMiddleware, getMe);
 router.put("/profile", authMiddleware, updateProfile);
 router.get("/users", authMiddleware, roleMiddleware("admin"), getUsers);
